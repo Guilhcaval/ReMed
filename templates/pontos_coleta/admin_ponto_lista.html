@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Aprovação de pontos de coleta · ReMed{% endblock %}
+
+{% block content %}
+  <div class="remed-admin-wrapper">
+    <section class="remed-card p-3 p-sm-4 p-md-5 shadow-sm" aria-labelledby="titulo-admin-pontos">
+      <header class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-4">
+        <div>
+          <h1 id="titulo-admin-pontos" class="h3 fw-bold remed-auth-title mb-1">
+            Aprovação e gestão de pontos de coleta
+          </h1>
+          <p class="remed-hint mb-0">
+            Área restrita à função aprovação de pontos de coleta (2FA obrigatório).
+          </p>
+        </div>
+        <span class="badge remed-badge-read px-3 py-2 align-self-start align-self-md-center">
+          {{ total_encontrados }} ponto(s)
+        </span>
+      </header>
+
+      <form method="get" action="{% url 'pontos_coleta:admin_lista' %}" class="border rounded p-3 mb-4 bg-light" novalidate>
+        <div class="row g-3">
+          <div class="col-12 col-md-4">
+            <label for="{{ form.termo.id_for_label }}" class="form-label fw-medium">Razão social ou nome fantasia</label>
+            {{ form.termo }}
+          </div>
+          <div class="col-12 col-md-4">
+            <label for="{{ form.cnpj.id_for_label }}" class="form-label fw-medium">{{ form.cnpj.label }}</label>
+            {{ form.cnpj }}
+          </div>
+          <div class="col-12 col-md-4">
+            <label for="{{ form.tipo_estabelecimento.id_for_label }}" class="form-label fw-medium">{{ form.tipo_estabelecimento.label }}</label>
+            {{ form.tipo_estabelecimento }}
+          </div>
+          <div class="col-12 col-md-4">
+            <label for="{{ form.municipio.id_for_label }}" class="form-label fw-medium">{{ form.municipio.label }}</label>
+            {{ form.municipio }}
+          </div>
+          <div class="col-12 col-md-4">
+            <label for="{{ form.status.id_for_label }}" class="form-label fw-medium">{{ form.status.label }}</label>
+            {{ form.status }}
+          </div>
+          <div class="col-12 col-md-4 d-flex align-items-end">
+            <div class="form-check remed-check-touch">
+              {{ form.revisao_vencida }}
+              <label class="form-check-label small" for="{{ form.revisao_vencida.id_for_label }}">
+                {{ form.revisao_vencida.label }}
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="d-flex flex-wrap gap-2 mt-3">
+          <button type="submit" class="btn btn-primary btn-sm px-3">Pesquisar</button>
+          {% if tem_filtros %}
+            <a href="{% url 'pontos_coleta:admin_lista' %}" class="btn btn-outline-secondary btn-sm">Limpar filtros</a>
+          {% endif %}
+        </div>
+      </form>
+
+      {% if pagina.object_list %}
+        <div class="table-responsive">
+          <table class="table align-middle mb-4">
+            <thead class="table-light">
+              <tr>
+                <th scope="col">Estabelecimento</th>
+                <th scope="col">CNPJ</th>
+                <th scope="col">Tipo / Município</th>
+                <th scope="col">Status</th>
+                <th scope="col">Última revisão</th>
+                <th scope="col" class="text-end">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for ponto in pagina.object_list %}
+                <tr>
+                  <td>
+                    <div class="fw-semibold">{{ ponto.nome_fantasia }}</div>
+                    <div class="small text-secondary">{{ ponto.razao_social }}</div>
+                  </td>
+                  <td class="small text-nowrap">{{ ponto.cnpj }}</td>
+                  <td class="small">
+                    <div>{{ ponto.tipo_estabelecimento.nome }}</div>
+                    <div class="text-secondary">{{ ponto.municipio }}/{{ ponto.estado }}</div>
+                  </td>
+                  <td>
+                    <span class="badge remed-status-badge remed-status-{{ ponto.status }}">
+                      {{ ponto.get_status_display }}
+                    </span>
+                  </td>
+                  <td class="small text-secondary text-nowrap">
+                    {% if ponto.ultima_revisao_em %}
+                      {{ ponto.ultima_revisao_em|date:"d/m/Y" }}
+                    {% else %}
+                      —
+                    {% endif %}
+                  </td>
+                  <td class="text-end">
+                    <a
+                      href="{% url 'pontos_coleta:admin_detalhe' ponto_id=ponto.pk %}"
+                      class="btn btn-outline-primary btn-sm"
+                    >
+                      Analisar
+                    </a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="text-center py-4 border rounded bg-light">
+          <p class="fw-medium mb-0">Nenhum ponto de coleta encontrado para os filtros informados.</p>
+        </div>
+      {% endif %}
+    </section>
+  </div>
+{% endblock %}

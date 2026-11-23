@@ -287,3 +287,50 @@ class AutenticacaoViewsEMixinsTest(TestCase):
         resposta = self.client.get(reverse("contas:recuperar_senha_em_breve"))
         self.assertEqual(resposta.status_code, 200)
         self.assertContains(resposta, "Recurso disponível em breve")
+
+    def test_login_exibe_aviso_informativo_quando_next_eh_cadastro_ponto_coleta(self):
+        url_login = reverse("contas:login")
+        url_cadastrar_ponto = reverse("pontos_coleta:cadastrar")
+        url_cadastro_pf = reverse("contas:cadastro")
+
+        resposta_get = self.client.get(f"{url_login}?next={url_cadastrar_ponto}")
+        self.assertEqual(resposta_get.status_code, 200)
+        self.assertIs(resposta_get.context["aviso_cadastro_ponto_coleta"], True)
+        self.assertContains(
+            resposta_get,
+            "Para cadastrar um Ponto de Coleta (Pessoa Jurídica), entre primeiro com sua conta de",
+        )
+        self.assertContains(resposta_get, "Crie sua conta de Pessoa Física primeiro")
+        self.assertContains(resposta_get, f'href="{url_cadastro_pf}"')
+
+        # Em POST inválido mantendo o mesmo next, o aviso continua visível
+        resposta_post = self.client.post(
+            url_login,
+            data={
+                "identificador": "inexistente@exemplo.com",
+                "senha": "Errada!1",
+                "next": url_cadastrar_ponto,
+            },
+        )
+        self.assertEqual(resposta_post.status_code, 200)
+        self.assertIs(resposta_post.context["aviso_cadastro_ponto_coleta"], True)
+        self.assertContains(resposta_post, "Crie sua conta de Pessoa Física primeiro")
+
+    def test_login_nao_exibe_aviso_ponto_coleta_sem_next_ou_com_outro_destino(self):
+        url_login = reverse("contas:login")
+        url_perfil = reverse("contas:perfil_editar")
+
+        for url in (
+            url_login,
+            f"{url_login}?next={url_perfil}",
+            f"{url_login}?next=https://externo.exemplo/pontos-coleta/cadastrar/",
+        ):
+            with self.subTest(url=url):
+                resposta = self.client.get(url)
+                self.assertEqual(resposta.status_code, 200)
+                self.assertIs(resposta.context["aviso_cadastro_ponto_coleta"], False)
+                self.assertNotContains(resposta, "Crie sua conta de Pessoa Física primeiro")
+                self.assertNotContains(
+                    resposta,
+                    "Para cadastrar um Ponto de Coleta (Pessoa Jurídica)",
+                )

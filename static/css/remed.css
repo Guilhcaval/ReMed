@@ -48,6 +48,59 @@
   object-fit: contain;
 }
 
+.remed-nav-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding-inline: 0.75rem;
+  color: var(--remed-text);
+  font-weight: 500;
+  border-radius: 0.45rem;
+  border-bottom: 2px solid transparent;
+}
+
+.remed-nav-link:hover,
+.remed-nav-link:focus-visible {
+  color: var(--remed-primary);
+  background-color: var(--remed-surface-muted);
+}
+
+.remed-nav-link.active,
+.remed-nav-link[aria-current="page"] {
+  color: var(--remed-primary);
+  background-color: var(--remed-surface-muted);
+  font-weight: 700;
+  border-bottom-color: var(--remed-primary);
+}
+
+.remed-dropdown-item {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  color: var(--remed-text);
+}
+
+.remed-dropdown-item:hover,
+.remed-dropdown-item:focus-visible {
+  background-color: var(--remed-surface-muted);
+  color: var(--remed-primary);
+}
+
+.remed-dropdown-item.active,
+.remed-dropdown-item[aria-current="page"] {
+  background-color: var(--remed-primary);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+@media (max-width: 991.98px) {
+  .remed-nav-account {
+    border-top: 1px solid var(--remed-border);
+    margin-top: 0.5rem;
+    padding-top: 0.75rem;
+  }
+}
+
 .remed-auth-logo {
   display: block;
   width: auto;
@@ -390,6 +443,56 @@ textarea:focus-visible {
   background-color: var(--remed-danger-soft);
   color: #8f1d28;
   border-color: #ebbfc4;
+}
+
+.remed-status-pendente_aprovacao,
+.remed-status-enviado,
+.remed-status-em_analise {
+  background-color: #e8f1fb;
+  color: #143f6b;
+  border-color: #bdd4ee;
+}
+
+.remed-status-aprovado {
+  background-color: #e6f4ea;
+  color: #14532d;
+  border-color: #b7dfc4;
+}
+
+.remed-status-reprovado,
+.remed-status-vencido {
+  background-color: var(--remed-danger-soft);
+  color: #8f1d28;
+  border-color: #ebbfc4;
+}
+
+.remed-btn-accent {
+  background-color: var(--remed-accent);
+  border-color: var(--remed-accent);
+  color: #ffffff;
+  min-height: 2.875rem;
+  border-radius: 0.5rem;
+}
+
+.remed-btn-accent:hover,
+.remed-btn-accent:focus-visible {
+  background-color: #165e3f;
+  border-color: #165e3f;
+  color: #ffffff;
+}
+
+.remed-banner-neutral {
+  background-color: var(--remed-surface);
+  border: 1px solid var(--remed-border);
+  color: var(--remed-text);
+  border-radius: 0.5rem;
+}
+
+.remed-badge-accent-soft {
+  background-color: var(--remed-accent-soft);
+  color: #14532d;
+  border: 1px solid var(--remed-accent-border);
+  font-weight: 600;
 }
 
 @media (max-width: 575.98px) {

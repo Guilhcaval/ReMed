@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Meus pontos de coleta · ReMed{% endblock %}
+
+{% block content %}
+  <div class="remed-admin-wrapper">
+    <section class="remed-card p-3 p-sm-4 p-md-5 shadow-sm mb-4" aria-labelledby="titulo-meus-pontos">
+      <header class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+          <h1 id="titulo-meus-pontos" class="h3 fw-bold remed-auth-title mb-1">
+            Meus pontos de coleta
+          </h1>
+          <p class="remed-hint mb-0">
+            Gerencie as instituições vinculadas à sua conta, envie documentos obrigatórios e acompanhe convites.
+          </p>
+        </div>
+        <a href="{% url 'pontos_coleta:cadastrar' %}" class="btn remed-btn-accent fw-semibold">
+          Cadastrar novo ponto de coleta
+        </a>
+      </header>
+
+      {% if convites_pendentes %}
+        <div class="border rounded p-3 mb-4 bg-light" aria-labelledby="titulo-convites">
+          <h2 id="titulo-convites" class="remed-section-title mb-2">Convites pendentes</h2>
+          <p class="remed-hint mb-3">
+            Você só passa a ter acesso de gestão após aceitar o convite.
+          </p>
+          <ul class="list-unstyled d-flex flex-column gap-2 mb-0">
+            {% for convite in convites_pendentes %}
+              <li class="border rounded p-3 bg-white d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                <div>
+                  <div class="fw-semibold">{{ convite.ponto_coleta.nome_fantasia }}</div>
+                  <div class="small text-secondary">
+                    {{ convite.ponto_coleta.tipo_estabelecimento.nome }} ·
+                    {{ convite.ponto_coleta.municipio }}/{{ convite.ponto_coleta.estado }}
+                  </div>
+                </div>
+                <div class="d-flex gap-2">
+                  <form method="post" action="{% url 'pontos_coleta:convite_responder' convite_id=convite.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="decisao" value="aceitar">
+                    <button type="submit" class="btn btn-primary btn-sm">Aceitar convite</button>
+                  </form>
+                  <form method="post" action="{% url 'pontos_coleta:convite_responder' convite_id=convite.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="decisao" value="recusar">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm">Recusar</button>
+                  </form>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      {% if pontos_itens %}
+        <div class="d-flex flex-column gap-3">
+          {% for ponto, situacao, ultima_analise in pontos_itens %}
+            <article class="border rounded p-3 p-md-4 bg-white">
+              <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-2 mb-2">
+                <div>
+                  <h2 class="h5 fw-bold mb-1">{{ ponto.nome_fantasia }}</h2>
+                  <p class="small text-secondary mb-0">
+                    {{ ponto.razao_social }} · {{ ponto.tipo_estabelecimento.nome }} ·
+                    {{ ponto.municipio }}/{{ ponto.estado }}
+                  </p>
+                </div>
+                <span class="badge remed-status-badge remed-status-{{ ponto.status }} px-3 py-2">
+                  {{ ponto.get_status_display }}
+                </span>
+              </div>
+
+              <div class="small mb-3">
+                {% if situacao.todos_aprovados_validos %}
+                  <span class="badge remed-status-badge remed-status-aprovado">Documentação obrigatória aprovada</span>
+                {% elif situacao.todos_enviados_validos %}
+                  <span class="badge remed-status-badge remed-status-em_analise">Documentos obrigatórios enviados para análise</span>
+                {% else %}
+                  <span class="badge remed-status-badge remed-status-suspenso">Envie os documentos obrigatórios (Licença e Alvará)</span>
+                {% endif %}
+              </div>
+
+              {% if ultima_analise and ultima_analise.motivo %}
+                <p class="small border-start border-3 ps-3 mb-3">
+                  <strong>Última decisão ({{ ultima_analise.get_tipo_acao_display }}):</strong>
+                  {{ ultima_analise.motivo }}
+                </p>
+              {% endif %}
+
+              <div class="d-flex flex-wrap gap-2 align-items-center">
+                <a href="{% url 'pontos_coleta:documentos' ponto_id=ponto.pk %}" class="btn btn-primary btn-sm">
+                  Documentos obrigatórios
+                </a>
+                <a href="{% url 'pontos_coleta:editar' ponto_id=ponto.pk %}" class="btn btn-outline-primary btn-sm">
+                  Editar dados
+                </a>
+                <a href="{% url 'pontos_coleta:responsaveis' ponto_id=ponto.pk %}" class="btn btn-outline-secondary btn-sm">
+                  Responsáveis
+                </a>
+                {% if ponto.status != "inativo" %}
+                  <form method="post" action="{% url 'pontos_coleta:inativar' ponto_id=ponto.pk %}" class="d-inline-flex align-items-center gap-2 ms-md-auto">
+                    {% csrf_token %}
+                    <div class="form-check mb-0">
+                      <input
+                        class="form-check-input"
+                        type="checkbox"
+                        name="confirmar_inativacao"
+                        value="sim"
+                        id="id_inativar_{{ ponto.pk }}"
+                        required
+                      >
+                      <label class="form-check-label small" for="id_inativar_{{ ponto.pk }}">
+                        Confirmar inativação
+                      </label>
+                    </div>
+                    <button type="submit" class="btn btn-outline-danger btn-sm">Inativar ponto</button>
+                  </form>
+                {% endif %}
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="text-center py-4 border rounded bg-light">
+          <p class="fw-medium mb-2">Você ainda não gerencia nenhum ponto de coleta.</p>
+          <a href="{% url 'pontos_coleta:cadastrar' %}" class="btn btn-outline-primary btn-sm">
+            Cadastrar ponto de coleta
+          </a>
+        </div>
+      {% endif %}
+    </section>
+  </div>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Responsáveis do ponto · ReMed{% endblock %}
+
+{% block content %}
+  <div class="remed-auth-wrapper">
+    <div class="mb-3">
+      <a href="{% url 'pontos_coleta:meus_pontos' %}" class="link-primary small fw-medium">
+        &larr; Voltar para Meus pontos
+      </a>
+    </div>
+
+    <section class="remed-card p-3 p-sm-4 p-md-5 shadow-sm mb-4" aria-labelledby="titulo-responsaveis">
+      <header class="mb-4">
+        <h1 id="titulo-responsaveis" class="h3 fw-bold remed-auth-title mb-1">
+          Responsáveis · {{ ponto.nome_fantasia }}
+        </h1>
+        <p class="remed-hint mb-0">
+          O ponto deve manter ao menos 1 responsável ativo. Novos responsáveis só obtêm acesso após aceitar o convite.
+        </p>
+      </header>
+
+      <h2 class="remed-section-title mb-3">Vínculos atuais e convites pendentes</h2>
+      <ul class="list-unstyled d-flex flex-column gap-2 mb-4">
+        {% for resp in responsaveis %}
+          <li class="border rounded p-3 bg-white d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
+            <div>
+              <div class="fw-semibold">{{ resp.nome_completo }}</div>
+              <div class="small text-secondary">{{ resp.email }} · CPF {{ resp.cpf_mascarado }}</div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge remed-status-badge remed-status-{{ resp.status }}">
+                {{ resp.status_display }}
+              </span>
+              <form method="post" action="{% url 'pontos_coleta:responsaveis' ponto_id=ponto.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="acao" value="desvincular">
+                <input type="hidden" name="responsavel_id" value="{{ resp.id }}">
+                <button type="submit" class="btn btn-outline-danger btn-sm">Desvincular</button>
+              </form>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+
+      <hr class="remed-section-divider my-4">
+
+      <h2 class="remed-section-title mb-2">Convidar outro responsável</h2>
+      <p class="remed-hint mb-3">
+        Informe o e-mail ou CPF de uma conta ReMed ativa e confirmada.
+      </p>
+
+      {% if form_convite.errors %}
+        <div class="remed-error-summary p-3 mb-3 small" role="alert" aria-live="polite">
+          {% for msg in form_convite.mensagens_resumo_erros %}{{ msg }}{% endfor %}
+        </div>
+      {% endif %}
+
+      <form method="post" action="{% url 'pontos_coleta:responsaveis' ponto_id=ponto.pk %}" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="acao" value="convidar">
+        <div class="mb-3">
+          <label for="{{ form_convite.identificador.id_for_label }}" class="form-label fw-medium">
+            {{ form_convite.identificador.label }}
+          </label>
+          {{ form_convite.identificador }}
+        </div>
+        <button type="submit" class="btn btn-primary">Enviar convite</button>
+      </form>
+    </section>
+  </div>
+{% endblock %}

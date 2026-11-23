@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Documentos de pontos de coleta · ReMed{% endblock %}
+
+{% block content %}
+  <div class="remed-admin-wrapper">
+    <section class="remed-card p-3 p-sm-4 p-md-5 shadow-sm" aria-labelledby="titulo-admin-docs">
+      <header class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-4">
+        <div>
+          <h1 id="titulo-admin-docs" class="h3 fw-bold remed-auth-title mb-1">
+            Documentos de pontos de coleta
+          </h1>
+          <p class="remed-hint mb-0">Pesquisa administrativa por ponto, tipo, status e validade.</p>
+        </div>
+        <span class="badge remed-badge-read px-3 py-2 align-self-start align-self-md-center">
+          {{ total_encontrados }} documento(s)
+        </span>
+      </header>
+
+      <form method="get" action="{% url 'pontos_coleta:admin_documentos' %}" class="border rounded p-3 mb-4 bg-light" novalidate>
+        <div class="row g-3">
+          <div class="col-12 col-sm-6 col-md-3">
+            <label for="{{ form.ponto_coleta.id_for_label }}" class="form-label fw-medium">{{ form.ponto_coleta.label }}</label>
+            {{ form.ponto_coleta }}
+          </div>
+          <div class="col-12 col-sm-6 col-md-3">
+            <label for="{{ form.tipo_documento.id_for_label }}" class="form-label fw-medium">{{ form.tipo_documento.label }}</label>
+            {{ form.tipo_documento }}
+          </div>
+          <div class="col-12 col-sm-6 col-md-3">
+            <label for="{{ form.status.id_for_label }}" class="form-label fw-medium">{{ form.status.label }}</label>
+            {{ form.status }}
+          </div>
+          <div class="col-12 col-sm-6 col-md-3">
+            <label for="{{ form.validade_ate.id_for_label }}" class="form-label fw-medium">{{ form.validade_ate.label }}</label>
+            {{ form.validade_ate }}
+          </div>
+        </div>
+        <div class="d-flex flex-wrap gap-2 mt-3">
+          <button type="submit" class="btn btn-primary btn-sm px-3">Pesquisar</button>
+          {% if tem_filtros %}
+            <a href="{% url 'pontos_coleta:admin_documentos' %}" class="btn btn-outline-secondary btn-sm">Limpar filtros</a>
+          {% endif %}
+        </div>
+      </form>
+
+      {% if pagina.object_list %}
+        <div class="table-responsive">
+          <table class="table align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th scope="col">Ponto</th>
+                <th scope="col">Tipo / Versão</th>
+                <th scope="col">Número</th>
+                <th scope="col">Validade</th>
+                <th scope="col">Status</th>
+                <th scope="col" class="text-end">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for doc in pagina.object_list %}
+                <tr>
+                  <td>
+                    <a href="{% url 'pontos_coleta:admin_detalhe' ponto_id=doc.ponto_coleta_id %}" class="fw-semibold">
+                      {{ doc.ponto_coleta.nome_fantasia }}
+                    </a>
+                    <div class="small text-secondary">#{{ doc.ponto_coleta_id }}</div>
+                  </td>
+                  <td>{{ doc.tipo_documento.nome }} (v{{ doc.versao }})</td>
+                  <td>{{ doc.numero_documento }}</td>
+                  <td class="text-nowrap">{{ doc.data_validade|date:"d/m/Y" }}</td>
+                  <td>
+                    <span class="badge remed-status-badge remed-status-{{ doc.status }}">
+                      {{ doc.get_status_display }}
+                    </span>
+                  </td>
+                  <td class="text-end">
+                    <a
+                      href="{% url 'pontos_coleta:documento_acessar' doc_id=doc.pk %}"
+                      class="btn btn-outline-primary btn-sm"
+                    >
+                      Abrir (60 s)
+                    </a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="text-center py-4 border rounded bg-light">
+          <p class="fw-medium mb-0">Nenhum documento encontrado para os filtros informados.</p>
+        </div>
+      {% endif %}
+    </section>
+  </div>
+{% endblock %}

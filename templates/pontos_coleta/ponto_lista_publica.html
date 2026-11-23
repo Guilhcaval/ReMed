@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Pontos de coleta ativos · ReMed{% endblock %}
+
+{% block content %}
+  <div class="remed-admin-wrapper">
+    <section class="remed-card p-3 p-sm-4 p-md-5 shadow-sm" aria-labelledby="titulo-pontos-publicos">
+      <header class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+          <h1 id="titulo-pontos-publicos" class="h3 fw-bold remed-auth-title mb-1">
+            Pontos de coleta ativos
+          </h1>
+          <p class="remed-hint mb-0">
+            Locais parceiros aprovados para encontros seguros de retirada presencial (não realizam guarda temporária de medicamentos).
+          </p>
+        </div>
+        <span class="badge remed-badge-read px-3 py-2 align-self-start align-self-md-center">
+          {{ total_encontrados }} ponto(s) ativo(s)
+        </span>
+      </header>
+
+      <form method="get" action="{% url 'pontos_coleta:lista_publica' %}" class="border rounded p-3 mb-4 bg-light" novalidate>
+        <div class="row g-3">
+          <div class="col-12 col-md-5">
+            <label for="{{ form.termo.id_for_label }}" class="form-label fw-medium">{{ form.termo.label }}</label>
+            {{ form.termo }}
+          </div>
+          <div class="col-12 col-md-4">
+            <label for="{{ form.tipo_estabelecimento.id_for_label }}" class="form-label fw-medium">{{ form.tipo_estabelecimento.label }}</label>
+            {{ form.tipo_estabelecimento }}
+          </div>
+          <div class="col-12 col-md-3">
+            <label for="{{ form.municipio.id_for_label }}" class="form-label fw-medium">{{ form.municipio.label }}</label>
+            {{ form.municipio }}
+          </div>
+        </div>
+        <div class="d-flex flex-wrap gap-2 mt-3">
+          <button type="submit" class="btn btn-primary btn-sm px-3">Pesquisar</button>
+          {% if tem_filtros %}
+            <a href="{% url 'pontos_coleta:lista_publica' %}" class="btn btn-outline-secondary btn-sm">Limpar filtros</a>
+          {% endif %}
+        </div>
+      </form>
+
+      {% if pagina.object_list %}
+        <div class="row g-3 mb-4">
+          {% for ponto in pagina.object_list %}
+            <div class="col-12 col-lg-6">
+              <article class="border rounded p-3 h-100 bg-white">
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                  <h2 class="h6 fw-bold mb-0">{{ ponto.nome_fantasia }}</h2>
+                  <span class="badge remed-badge-read">{{ ponto.tipo_estabelecimento.nome }}</span>
+                </div>
+                <p class="small mb-2">
+                  {{ ponto.logradouro }}, {{ ponto.numero }}{% if ponto.complemento %} · {{ ponto.complemento }}{% endif %}<br>
+                  {{ ponto.bairro }} · {{ ponto.municipio }}/{{ ponto.estado }}
+                </p>
+                <div class="d-flex flex-wrap gap-2 mb-2">
+                  {% if ponto.possui_refrigeracao %}
+                    <span class="badge remed-badge-accent-soft">Possui refrigeração</span>
+                  {% else %}
+                    <span class="badge remed-badge-read">Sem refrigeração</span>
+                  {% endif %}
+                </div>
+                <div class="small text-secondary">
+                  <strong>Horários:</strong>
+                  {% for h in ponto.horarios.all %}
+                    <span class="d-inline-block me-2">{{ h }}</span>
+                  {% endfor %}
+                </div>
+              </article>
+            </div>
+          {% endfor %}
+        </div>
+
+        {% if pagina.has_other_pages %}
+          <nav aria-label="Paginação de pontos de coleta">
+            <ul class="pagination justify-content-center mb-0">
+              {% if pagina.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ pagina.previous_page_number }}{% if request.GET.termo %}&termo={{ request.GET.termo|urlencode }}{% endif %}{% if request.GET.tipo_estabelecimento %}&tipo_estabelecimento={{ request.GET.tipo_estabelecimento|urlencode }}{% endif %}{% if request.GET.municipio %}&municipio={{ request.GET.municipio|urlencode }}{% endif %}">
+                    Anterior
+                  </a>
+                </li>
+              {% endif %}
+              <li class="page-item disabled">
+                <span class="page-link">Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+              </li>
+              {% if pagina.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ pagina.next_page_number }}{% if request.GET.termo %}&termo={{ request.GET.termo|urlencode }}{% endif %}{% if request.GET.tipo_estabelecimento %}&tipo_estabelecimento={{ request.GET.tipo_estabelecimento|urlencode }}{% endif %}{% if request.GET.municipio %}&municipio={{ request.GET.municipio|urlencode }}{% endif %}">
+                    Próxima
+                  </a>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+        {% endif %}
+      {% else %}
+        <div class="text-center py-4 border rounded bg-light">
+          <p class="fw-medium mb-0">Nenhum ponto de coleta ativo encontrado para os filtros informados.</p>
+        </div>
+      {% endif %}
+    </section>
+  </div>
+{% endblock %}

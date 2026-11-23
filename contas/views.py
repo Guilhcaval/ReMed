@@ -95,6 +95,18 @@ def _resolver_destino_seguro(request, candidato: str | None) -> str:
     return settings.LOGIN_REDIRECT_URL
 
 
+def _eh_destino_cadastro_ponto_coleta(request, candidato: str | None) -> bool:
+    """Confirma se `next` corresponde exatamente à rota de cadastro de Ponto de Coleta."""
+    if not candidato:
+        return False
+    destino_ponto_coleta = reverse("pontos_coleta:cadastrar")
+    return candidato == destino_ponto_coleta and url_has_allowed_host_and_scheme(
+        url=candidato,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    )
+
+
 class UsuarioCadastroView(VisitanteObrigatorioMixin, View):
     template_name = "contas/usuario_cadastro.html"
 
@@ -246,9 +258,6 @@ class UsuarioPerfilEditarView(AutenticadoAtivoMixin, View):
 
     def _contexto(self, form: UsuarioPerfilEditarForm, perfil) -> dict:
         usuario = perfil.usuario
-        pode_gestao_usuarios = AutenticacaoService.possui_funcao(
-            usuario, "gestao_usuarios"
-        ) or AutenticacaoService.possui_funcao(usuario, "gestao_administradores")
         return {
             "form": form,
             "cpf_formatado": formatar_cpf(usuario.cpf or ""),
@@ -256,7 +265,6 @@ class UsuarioPerfilEditarView(AutenticadoAtivoMixin, View):
             "criado_em": usuario.criado_em,
             "exige_2fa": AutenticacaoService.possui_funcao_administrativa(usuario),
             "totp_ativo": AutenticacaoService.possui_totp_ativo(usuario),
-            "pode_gestao_usuarios": pode_gestao_usuarios,
         }
 
     def get(self, request):
@@ -341,6 +349,7 @@ class LoginView(View):
 
     def _contexto(
         self,
+        request,
         form: LoginForm,
         *,
         next_url: str = "",
@@ -350,6 +359,7 @@ class LoginView(View):
             "form": form,
             "next_url": next_url,
             "mostrar_reenvio_confirmacao": mostrar_reenvio_confirmacao,
+            "aviso_cadastro_ponto_coleta": _eh_destino_cadastro_ponto_coleta(request, next_url),
         }
 
     def get(self, request):
@@ -369,14 +379,18 @@ class LoginView(View):
         return render(
             request,
             self.template_name,
-            self._contexto(LoginForm(), next_url=request.GET.get("next", "")),
+            self._contexto(request, LoginForm(), next_url=request.GET.get("next", "")),
         )
 
     def post(self, request):
         form = LoginForm(request.POST)
         next_url = request.POST.get("next") or request.GET.get("next") or ""
         if not form.is_valid():
-            return render(request, self.template_name, self._contexto(form, next_url=next_url))
+            return render(
+                request,
+                self.template_name,
+                self._contexto(request, form, next_url=next_url),
+            )
 
         try:
             resultado = AutenticacaoService.autenticar(
@@ -389,7 +403,7 @@ class LoginView(View):
             return render(
                 request,
                 self.template_name,
-                self._contexto(form, next_url=next_url),
+                self._contexto(request, form, next_url=next_url),
                 status=429,
             )
         except EmailNaoConfirmado as erro:
@@ -397,11 +411,20 @@ class LoginView(View):
             return render(
                 request,
                 self.template_name,
-                self._contexto(form, next_url=next_url, mostrar_reenvio_confirmacao=True),
+                self._contexto(
+                    request,
+                    form,
+                    next_url=next_url,
+                    mostrar_reenvio_confirmacao=True,
+                ),
             )
         except (CredenciaisInvalidas, ContaIndisponivel) as erro:
             form.add_error(None, ValidationError(str(erro), code="regra_negocio"))
-            return render(request, self.template_name, self._contexto(form, next_url=next_url))
+            return render(
+                request,
+                self.template_name,
+                self._contexto(request, form, next_url=next_url),
+            )
 
         login(request, resultado.usuario, backend="contas.backends.EmailOuCpfBackend")
         if not request.session.session_key:

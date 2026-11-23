@@ -35,3 +35,44 @@ class CepNaoEncontrado(RecursoNaoEncontrado):
 
 class ServicoCepIndisponivel(ErroDominio):
     """Falha ou timeout nos provedores externos de CEP (libera preenchimento manual)."""
+
+
+class ArquivoTamanhoExcedido(RegraNegocioViolada):
+    """Arquivo acima do limite máximo permitido (5 MB — RF006 / ADR 0016)."""
+
+    def __init__(self, mensagem: str = "O arquivo deve ter no máximo 5 MB"):
+        super().__init__(mensagem)
+
+
+class ArquivoFormatoInvalido(RegraNegocioViolada):
+    """Extensão, assinatura (magic bytes) ou conteúdo de arquivo inválido."""
+
+    def __init__(self, mensagem: str = "Envie o arquivo em PDF, JPG ou PNG"):
+        super().__init__(mensagem)
+
+
+class ArquivoMalwareDetectado(RegraNegocioViolada):
+    """Scanner antimalware identificou ameaça no arquivo enviado (ADR 0016)."""
+
+    def __init__(
+        self,
+        mensagem: str = "O arquivo foi recusado pela verificação de segurança.",
+    ):
+        super().__init__(mensagem)
+
+
+class ArquivoScannerIndisponivel(RegraNegocioViolada):
+    """Falha ou indisponibilidade do scanner antimalware (modo fail-closed — ADR 0016)."""
+
+    def __init__(
+        self,
+        mensagem: str = (
+            "Não foi possível concluir a verificação de segurança do arquivo no momento. "
+            "Tente novamente em instantes."
+        ),
+    ):
+        super().__init__(mensagem)
+
+
+class LinkArquivoExpirado(RecursoNaoEncontrado):
+    """Link temporário assinado expirado, adulterado ou pertencente a outro usuário."""

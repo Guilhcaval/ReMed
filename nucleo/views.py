@@ -1,15 +1,18 @@
-"""Views do app nucleo (proxy interno de CEP — ADR 0018)."""
+"""Views do app nucleo (proxy interno de CEP e entrega local de arquivo privado)."""
 
 from django.conf import settings
-from django.http import JsonResponse
+from django.http import FileResponse, Http404, JsonResponse
 from django.views import View
 
+from nucleo.arquivos import ArquivoService
 from nucleo.exceptions import (
     CepInvalido,
     CepNaoEncontrado,
     LimiteTaxaExcedido,
+    LinkArquivoExpirado,
     ServicoCepIndisponivel,
 )
+from nucleo.mixins import AutenticadoAtivoMixin
 from nucleo.rate_limit import exigir_limite_taxa, obter_ip_cliente
 from nucleo.services import CepService
 
@@ -49,3 +52,27 @@ class CepConsultarView(View):
             },
             status=200,
         )
+
+
+class ArquivoPrivadoTemporarioView(AutenticadoAtivoMixin, View):
+    """Entrega local de arquivo privado mediante token assinado de 60 s (ADR 0016)."""
+
+    def get(self, request, token: str):
+        try:
+            arquivo = ArquivoService.abrir_por_token_temporario(
+                token,
+                usuario_id=request.user.pk,
+            )
+        except LinkArquivoExpirado as erro:
+            raise Http404(str(erro)) from erro
+
+        resposta = FileResponse(
+            arquivo.caminho.open("rb"),
+            content_type=arquivo.mime_verificado,
+            as_attachment=True,
+            filename=arquivo.nome_download,
+        )
+        resposta["X-Content-Type-Options"] = "nosniff"
+        resposta["Cache-Control"] = "no-store"
+        resposta["Pragma"] = "no-cache"
+        return resposta

@@ -63,3 +63,34 @@ class ExecucaoRotina(models.Model):
 
     def __str__(self) -> str:
         return f"{self.nome_rotina} ({self.resultado})"
+
+
+class TipoEstabelecimento(models.Model):
+    """Cadastro auxiliar de tipos de estabelecimento para pontos de coleta (RF005 / RN-05-02)."""
+
+    nome = models.CharField(max_length=80, unique=True)
+    ativo = models.BooleanField(default=True, db_index=True)
+
+    class Meta:
+        verbose_name = "Tipo de estabelecimento"
+        verbose_name_plural = "Tipos de estabelecimento"
+        ordering = ["id"]
+
+    def __str__(self) -> str:
+        return self.nome
+
+
+class TipoDocumentoPonto(models.Model):
+    """Cadastro auxiliar de documentos de pontos de coleta (RF006 / RN-06-01)."""
+
+    nome = models.CharField(max_length=100, unique=True)
+    obrigatorio = models.BooleanField(default=True)
+    ativo = models.BooleanField(default=True, db_index=True)
+
+    class Meta:
+        verbose_name = "Tipo de documento de ponto de coleta"
+        verbose_name_plural = "Tipos de documentos de pontos de coleta"
+        ordering = ["id"]
+
+    def __str__(self) -> str:
+        return self.nome

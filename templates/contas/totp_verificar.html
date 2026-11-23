@@ -2,17 +2,6 @@
 
 {% block title %}Verificação em dois fatores (2FA) · ReMed{% endblock %}
 
-{% block navbar_links %}
-  <ul class="navbar-nav ms-auto align-items-lg-center gap-2">
-    <li class="nav-item">
-      <form method="post" action="{% url 'contas:logout' %}" class="d-inline">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-outline-secondary btn-sm">Sair</button>
-      </form>
-    </li>
-  </ul>
-{% endblock %}
-
 {% block content %}
   <div class="remed-auth-wrapper-sm">
     <section class="remed-card p-4 p-md-5 shadow-sm" aria-labelledby="titulo-totp-verificar">

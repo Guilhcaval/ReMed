@@ -17,53 +17,158 @@
   <header class="remed-header border-bottom bg-white">
     <nav class="navbar navbar-expand-lg" aria-label="Navegação principal">
       <div class="container">
-        <a class="navbar-brand d-inline-flex align-items-center py-1 remed-brand" href="/">
-          <img
-            src="{% static 'img/logo.png' %}"
-            alt="ReMed"
-            width="36"
-            height="38"
-            class="remed-header-logo"
-            decoding="async"
+        {% if nav_autenticado and nav_pendente_2fa %}
+          <span class="navbar-brand d-inline-flex align-items-center py-1 remed-brand">
+            <img
+              src="{% static 'img/logo.png' %}"
+              alt="ReMed"
+              width="36"
+              height="38"
+              class="remed-header-logo"
+              decoding="async"
+            >
+          </span>
+          <form method="post" action="{% url 'contas:logout' %}" class="ms-auto mb-0">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-secondary btn-sm px-3">Sair</button>
+          </form>
+        {% else %}
+          <a
+            class="navbar-brand d-inline-flex align-items-center py-1 remed-brand"
+            href="{% if nav_autenticado %}{% url 'contas:perfil_editar' %}{% else %}{% url 'pontos_coleta:lista_publica' %}{% endif %}"
+            aria-label="ReMed — Página inicial"
           >
-        </a>
-        <button
-          class="navbar-toggler"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#remedNavbar"
-          aria-controls="remedNavbar"
-          aria-expanded="false"
-          aria-label="Abrir menu de navegação"
-        >
-          <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="remedNavbar">
-          {% block navbar_links %}
-            {% if request.user.is_authenticated %}
-              <ul class="navbar-nav ms-auto align-items-lg-center gap-2">
+            <img
+              src="{% static 'img/logo.png' %}"
+              alt="ReMed"
+              width="36"
+              height="38"
+              class="remed-header-logo"
+              decoding="async"
+            >
+          </a>
+          <button
+            class="navbar-toggler"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#remedNavbar"
+            aria-controls="remedNavbar"
+            aria-expanded="false"
+            aria-label="Abrir menu de navegação"
+          >
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <div class="collapse navbar-collapse" id="remedNavbar">
+            {% if nav_autenticado %}
+              <ul class="navbar-nav me-auto ms-lg-3 align-items-lg-center gap-1">
                 <li class="nav-item">
-                  <a class="nav-link" href="{% url 'notificacoes:lista' %}">
-                    Notificações
+                  <a
+                    class="nav-link remed-nav-link{% if nav_secao_ativa == 'pontos_publicos' %} active{% endif %}"
+                    {% if nav_secao_ativa == 'pontos_publicos' %}aria-current="page"{% endif %}
+                    href="{% url 'pontos_coleta:lista_publica' %}"
+                  >
+                    Pontos de coleta
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a
+                    class="nav-link remed-nav-link{% if nav_secao_ativa == 'meus_pontos' %} active{% endif %}"
+                    {% if nav_secao_ativa == 'meus_pontos' %}aria-current="page"{% endif %}
+                    href="{% url 'pontos_coleta:meus_pontos' %}"
+                  >
+                    Meus pontos
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a
+                    class="nav-link remed-nav-link{% if nav_secao_ativa == 'notificacoes' %} active{% endif %}"
+                    {% if nav_secao_ativa == 'notificacoes' %}aria-current="page"{% endif %}
+                    href="{% url 'notificacoes:lista' %}"
+                  >
+                    <span>Notificações</span>
                     {% if notificacoes_nao_lidas > 0 %}
                       <span class="badge rounded-pill remed-badge-unread ms-1">{{ notificacoes_nao_lidas }}</span>
                       <span class="visually-hidden">não lidas</span>
                     {% endif %}
                   </a>
                 </li>
+                {% if nav_admin_itens %}
+                  <li class="nav-item dropdown">
+                    <button
+                      type="button"
+                      class="nav-link dropdown-toggle remed-nav-link{% if nav_admin_ativo %} active{% endif %}"
+                      id="menuAdministracao"
+                      data-bs-toggle="dropdown"
+                      aria-expanded="false"
+                    >
+                      Administração
+                    </button>
+                    <ul class="dropdown-menu shadow-sm" aria-labelledby="menuAdministracao">
+                      {% for item in nav_admin_itens %}
+                        <li>
+                          <a
+                            class="dropdown-item remed-dropdown-item{% if nav_secao_ativa == item.secao %} active{% endif %}"
+                            {% if nav_secao_ativa == item.secao %}aria-current="page"{% endif %}
+                            href="{{ item.url }}"
+                          >
+                            {{ item.rotulo }}
+                          </a>
+                        </li>
+                      {% endfor %}
+                    </ul>
+                  </li>
+                {% endif %}
+              </ul>
+              <ul class="navbar-nav ms-lg-auto align-items-lg-center gap-2 remed-nav-account">
                 <li class="nav-item">
-                  <a class="nav-link" href="{% url 'contas:perfil_editar' %}">Meu perfil</a>
+                  <a
+                    class="nav-link remed-nav-link{% if nav_secao_ativa == 'meu_perfil' %} active{% endif %}"
+                    {% if nav_secao_ativa == 'meu_perfil' %}aria-current="page"{% endif %}
+                    href="{% url 'contas:perfil_editar' %}"
+                  >
+                    Meu perfil
+                  </a>
                 </li>
                 <li class="nav-item">
                   <form method="post" action="{% url 'contas:logout' %}" class="d-inline">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-outline-secondary btn-sm">Sair</button>
+                    <button type="submit" class="btn btn-outline-secondary btn-sm px-3">Sair</button>
                   </form>
                 </li>
               </ul>
+            {% else %}
+              <ul class="navbar-nav ms-auto align-items-lg-center gap-1 gap-lg-2">
+                <li class="nav-item">
+                  <a
+                    class="nav-link remed-nav-link{% if nav_secao_ativa == 'pontos_publicos' %} active{% endif %}"
+                    {% if nav_secao_ativa == 'pontos_publicos' %}aria-current="page"{% endif %}
+                    href="{% url 'pontos_coleta:lista_publica' %}"
+                  >
+                    Pontos de coleta
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a
+                    class="nav-link remed-nav-link{% if nav_secao_ativa == 'entrar' %} active{% endif %}"
+                    {% if nav_secao_ativa == 'entrar' %}aria-current="page"{% endif %}
+                    href="{% url 'contas:login' %}"
+                  >
+                    Entrar
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a
+                    class="nav-link remed-nav-link{% if nav_secao_ativa == 'cadastro' %} active{% endif %}"
+                    {% if nav_secao_ativa == 'cadastro' %}aria-current="page"{% endif %}
+                    href="{% url 'contas:cadastro' %}"
+                  >
+                    Criar conta
+                  </a>
+                </li>
+              </ul>
             {% endif %}
-          {% endblock %}
-        </div>
+          </div>
+        {% endif %}
       </div>
     </nav>
   </header>

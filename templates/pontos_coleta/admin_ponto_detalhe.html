@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+
+{% block title %}Análise do ponto de coleta · ReMed{% endblock %}
+
+{% block content %}
+  <div class="remed-admin-wrapper">
+    <div class="mb-3">
+      <a href="{% url 'pontos_coleta:admin_lista' %}" class="link-primary small fw-medium">
+        &larr; Voltar para a fila de pontos
+      </a>
+    </div>
+
+    <section class="remed-card p-3 p-sm-4 p-md-5 shadow-sm mb-4" aria-labelledby="titulo-admin-detalhe-ponto">
+      <header class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-2 mb-4">
+        <div>
+          <h1 id="titulo-admin-detalhe-ponto" class="h3 fw-bold remed-auth-title mb-1">
+            {{ ponto.nome_fantasia }}
+          </h1>
+          <p class="remed-hint mb-0">
+            {{ ponto.razao_social }} · CNPJ {{ detalhe.cnpj_formatado }} · Cadastrado em {{ ponto.criado_em|date:"d/m/Y H:i" }}
+          </p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+          <span class="badge remed-status-badge remed-status-{{ ponto.status }} px-3 py-2">
+            {{ ponto.get_status_display }}
+          </span>
+          {% if detalhe.revisao_vencida %}
+            <span class="badge remed-status-badge remed-status-suspenso px-3 py-2">
+              Revisão periódica pendente
+            </span>
+          {% endif %}
+        </div>
+      </header>
+
+      <dl class="row g-3 mb-4">
+        <div class="col-12 col-md-4">
+          <dt class="small text-secondary fw-medium">Tipo de estabelecimento</dt>
+          <dd class="mb-0">{{ ponto.tipo_estabelecimento.nome }}</dd>
+        </div>
+        <div class="col-12 col-md-4">
+          <dt class="small text-secondary fw-medium">Contato institucional</dt>
+          <dd class="mb-0">{{ ponto.email }} · {{ ponto.telefone }}</dd>
+        </div>
+        <div class="col-12 col-md-4">
+          <dt class="small text-secondary fw-medium">Refrigeração</dt>
+          <dd class="mb-0">{% if ponto.possui_refrigeracao %}Sim{% else %}Não{% endif %}</dd>
+        </div>
+        <div class="col-12 col-md-8">
+          <dt class="small text-secondary fw-medium">Endereço público</dt>
+          <dd class="mb-0">
+            {{ ponto.logradouro }}, {{ ponto.numero }}{% if ponto.complemento %} ({{ ponto.complemento }}){% endif %} ·
+            {{ ponto.bairro }} · {{ ponto.municipio }}/{{ ponto.estado }} · CEP {{ ponto.cep }}
+          </dd>
+        </div>
+        <div class="col-12 col-md-4">
+          <dt class="small text-secondary fw-medium">Última revisão</dt>
+          <dd class="mb-0">
+            {% if ponto.ultima_revisao_em %}{{ ponto.ultima_revisao_em|date:"d/m/Y H:i" }}{% else %}Ainda não revisado{% endif %}
+          </dd>
+        </div>
+        <div class="col-12">
+          <dt class="small text-secondary fw-medium">Horários de funcionamento</dt>
+          <dd class="mb-0 d-flex flex-wrap gap-2 mt-1">
+            {% for h in detalhe.horarios %}
+              <span class="badge remed-badge-read">{{ h }}</span>
+            {% endfor %}
+          </dd>
+        </div>
+        <div class="col-12">
+          <dt class="small text-secondary fw-medium">Responsáveis vinculados</dt>
+          <dd class="mb-0 d-flex flex-wrap gap-2 mt-1">
+            {% for r in detalhe.responsaveis %}
+              <span class="badge remed-badge-read">
+                {{ r.nome_completo }} ({{ r.cpf_mascarado }} · {{ r.status_display }})
+              </span>
+            {% endfor %}
+          </dd>
+        </div>
+      </dl>
+
+      <div class="remed-banner-neutral p-3 mb-4" role="note">
+        <h2 class="h6 fw-bold mb-2">Checklist orientativo de conferência (Questão 10 do PRD)</h2>
+        <ul class="small mb-0 ps-3">
+          {% for item in detalhe.checklist_orientativo %}
+            <li>{{ item }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <h2 class="remed-section-title mb-2">Documentos enviados (acesso auditado · 60 s)</h2>
+      {% if detalhe.documentos %}
+        <div class="table-responsive">
+          <table class="table align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th scope="col">Tipo</th>
+                <th scope="col">Versão</th>
+                <th scope="col">Número</th>
+                <th scope="col">Validade</th>
+                <th scope="col">Status</th>
+                <th scope="col" class="text-end">Visualizar</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for doc in detalhe.documentos %}
+                <tr>
+                  <td class="fw-medium">{{ doc.tipo_documento.nome }}</td>
+                  <td>v{{ doc.versao }}</td>
+                  <td>{{ doc.numero_documento }}</td>
+                  <td>{{ doc.data_validade|date:"d/m/Y" }}</td>
+                  <td>
+                    <span class="badge remed-status-badge remed-status-{{ doc.status }}">
+                      {{ doc.get_status_display }}
+                    </span>
+                  </td>
+                  <td class="text-end">
+                    <a
+                      href="{% url 'pontos_coleta:documento_acessar' doc_id=doc.pk %}"
+                      class="btn btn-outline-primary btn-sm"
+                    >
+                      Abrir documento
+                    </a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="remed-hint mb-0">Nenhum documento obrigatório foi enviado ainda.</p>
+      {% endif %}
+    </section>
+
+    <div class="row g-4 mb-4">
+      {% if ponto.status == "pendente_aprovacao" %}
+        <div class="col-12 col-lg-6">
+          <section class="remed-card p-3 p-sm-4 shadow-sm h-100" aria-labelledby="titulo-analise-inicial">
+            <h2 id="titulo-analise-inicial" class="remed-section-title mb-2">Análise de cadastro</h2>
+            {% if not detalhe.situacao_docs.todos_enviados_validos %}
+              <div class="alert alert-warning small" role="status">
+                A aprovação exige licença de funcionamento e alvará sanitário enviados e dentro da validade.
+              </div>
+            {% endif %}
+            {% if form_analise.errors %}
+              <div class="remed-error-summary p-3 mb-3 small" role="alert" aria-live="polite">
+                <ul class="mb-0 ps-3">
+                  {% for msg in form_analise.mensagens_resumo_erros %}<li>{{ msg }}</li>{% endfor %}
+                </ul>
+              </div>
+            {% endif %}
+            <form method="post" action="{% url 'pontos_coleta:admin_analisar' ponto_id=ponto.pk %}" novalidate>
+              {% csrf_token %}
+              <div class="mb-3">
+                <label for="{{ form_analise.resultado.id_for_label }}" class="form-label fw-medium">
+                  {{ form_analise.resultado.label }}
+                </label>
+                {{ form_analise.resultado }}
+              </div>
+              <div class="mb-3">
+                <label for="{{ form_analise.motivo.id_for_label }}" class="form-label fw-medium">
+                  {{ form_analise.motivo.label }}
+                </label>
+                {{ form_analise.motivo }}
+              </div>
+              <button type="submit" class="btn btn-primary">Registrar decisão</button>
+            </form>
+          </section>
+        </div>
+      {% endif %}
+
+      <div class="col-12 col-lg-6">
+        <section class="remed-card p-3 p-sm-4 shadow-sm h-100" aria-labelledby="titulo-situacao-ponto">
+          <h2 id="titulo-situacao-ponto" class="remed-section-title mb-2">Alterar situação operacional</h2>
+          <p class="remed-hint mb-3">
+            Suspender ou inativar remove o ponto das buscas públicas e trata agendamentos futuros.
+            Reativação exige documentos obrigatórios válidos.
+          </p>
+          {% if form_situacao.errors %}
+            <div class="remed-error-summary p-3 mb-3 small" role="alert" aria-live="polite">
+              <ul class="mb-0 ps-3">
+                {% for msg in form_situacao.mensagens_resumo_erros %}<li>{{ msg }}</li>{% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+          <form method="post" action="{% url 'pontos_coleta:admin_situacao' ponto_id=ponto.pk %}" novalidate>
+            {% csrf_token %}
+            <div class="mb-3">
+              <label for="{{ form_situacao.novo_status.id_for_label }}" class="form-label fw-medium">
+                {{ form_situacao.novo_status.label }}
+              </label>
+              {{ form_situacao.novo_status }}
+            </div>
+            <div class="mb-3">
+              <label for="{{ form_situacao.motivo.id_for_label }}" class="form-label fw-medium">
+                {{ form_situacao.motivo.label }} *
+              </label>
+              {{ form_situacao.motivo }}
+            </div>
+            <button type="submit" class="btn btn-outline-danger">Atualizar situação</button>
+          </form>
+        </section>
+      </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+      {% if ponto.status == "ativo" %}
+        <div class="col-12 col-lg-6">
+          <section class="remed-card p-3 p-sm-4 shadow-sm h-100" aria-labelledby="titulo-revisao-periodica">
+            <h2 id="titulo-revisao-periodica" class="remed-section-title mb-2">Revisão periódica</h2>
+            <p class="remed-hint mb-3">
+              Confirma a regularidade periódica do ponto ativo e atualiza a data da última revisão.
+            </p>
+            {% if form_revisao.errors %}
+              <div class="remed-error-summary p-3 mb-3 small" role="alert" aria-live="polite">
+                <ul class="mb-0 ps-3">
+                  {% for msg in form_revisao.mensagens_resumo_erros %}<li>{{ msg }}</li>{% endfor %}
+                </ul>
+              </div>
+            {% endif %}
+            <form method="post" action="{% url 'pontos_coleta:admin_revisar' ponto_id=ponto.pk %}" novalidate>
+              {% csrf_token %}
+              <div class="mb-3">
+                <label for="{{ form_revisao.motivo.id_for_label }}" class="form-label fw-medium">
+                  {{ form_revisao.motivo.label }}
+                </label>
+                {{ form_revisao.motivo }}
+              </div>
+              <button type="submit" class="btn btn-outline-primary">Registrar revisão periódica</button>
+            </form>
+          </section>
+        </div>
+      {% endif %}
+
+      <div class="col-12 col-lg-6">
+        <section class="remed-card p-3 p-sm-4 shadow-sm h-100" aria-labelledby="titulo-alterar-cnpj">
+          <h2 id="titulo-alterar-cnpj" class="remed-section-title mb-2">Alterar CNPJ (exclusivo Admin)</h2>
+          {% if form_cnpj.errors %}
+            <div class="remed-error-summary p-3 mb-3 small" role="alert" aria-live="polite">
+              <ul class="mb-0 ps-3">
+                {% for msg in form_cnpj.mensagens_resumo_erros %}<li>{{ msg }}</li>{% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+          <form method="post" action="{% url 'pontos_coleta:admin_alterar_cnpj' ponto_id=ponto.pk %}" novalidate>
+            {% csrf_token %}
+            <div class="mb-3">
+              <label for="{{ form_cnpj.novo_cnpj.id_for_label }}" class="form-label fw-medium">
+                {{ form_cnpj.novo_cnpj.label }} *
+              </label>
+              {{ form_cnpj.novo_cnpj }}
+            </div>
+            <div class="mb-3">
+              <label for="{{ form_cnpj.motivo.id_for_label }}" class="form-label fw-medium">
+                {{ form_cnpj.motivo.label }} *
+              </label>
+              {{ form_cnpj.motivo }}
+            </div>
+            <button type="submit" class="btn btn-outline-secondary">Alterar CNPJ</button>
+          </form>
+        </section>
+      </div>
+    </div>
+
+    <section class="remed-card p-3 p-sm-4 shadow-sm" aria-labelledby="titulo-historico-analises">
+      <h2 id="titulo-historico-analises" class="remed-section-title mb-3">Histórico imutável de análises</h2>
+      {% if detalhe.analises %}
+        <ul class="list-unstyled d-flex flex-column gap-2 mb-0">
+          {% for analise in detalhe.analises %}
+            <li class="border rounded p-3 bg-white">
+              <div class="d-flex flex-column flex-sm-row justify-content-between gap-1 mb-1">
+                <span class="fw-semibold">
+                  {{ analise.get_tipo_acao_display }}
+                  {% if analise.resultado %}· {{ analise.get_resultado_display }}{% endif %}
+                </span>
+                <time class="small text-secondary" datetime="{{ analise.criado_em|date:'c' }}">
+                  {{ analise.criado_em|date:"d/m/Y H:i" }}
+                </time>
+              </div>
+              <p class="small mb-1">
+                Status: <strong>{{ analise.status_anterior }}</strong> &rarr; <strong>{{ analise.status_novo }}</strong>
+              </p>
+              {% if analise.motivo %}
+                <p class="small mb-1"><strong>Motivo:</strong> {{ analise.motivo }}</p>
+              {% endif %}
+              <p class="remed-hint mb-0">
+                Responsável: {{ analise.responsavel.nome_completo|default:"Administrador" }} (#{{ analise.responsavel_id }})
+              </p>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="remed-hint mb-0">Nenhuma análise registrada até o momento.</p>
+      {% endif %}
+    </section>
+  </div>
+{% endblock %}

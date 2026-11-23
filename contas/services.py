@@ -829,6 +829,13 @@ class AutenticacaoService:
     """Autenticação por e-mail ou CPF, bloqueio de 15 min e registro append-only (Spec 02)."""
 
     @staticmethod
+    def obter_funcoes_administrativas(usuario: Usuario) -> frozenset[str]:
+        """Retorna as funções administrativas explícitas da conta (ignora is_superuser)."""
+        return frozenset(
+            usuario.groups.filter(name__in=FUNCOES_ADMINISTRATIVAS).values_list("name", flat=True)
+        )
+
+    @staticmethod
     def possui_funcao_administrativa(usuario: Usuario) -> bool:
         """Retorna True somente se a conta possui ao menos uma das 8 funções explícitas."""
         return usuario.groups.filter(name__in=FUNCOES_ADMINISTRATIVAS).exists()

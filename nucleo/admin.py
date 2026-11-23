@@ -1,6 +1,20 @@
 from django.contrib import admin
 
-from nucleo.models import CacheCep, ExecucaoRotina
+from nucleo.models import CacheCep, ExecucaoRotina, TipoDocumentoPonto, TipoEstabelecimento
+
+
+@admin.register(TipoEstabelecimento)
+class TipoEstabelecimentoAdmin(admin.ModelAdmin):
+    list_display = ("id", "nome", "ativo")
+    list_filter = ("ativo",)
+    search_fields = ("nome",)
+
+
+@admin.register(TipoDocumentoPonto)
+class TipoDocumentoPontoAdmin(admin.ModelAdmin):
+    list_display = ("id", "nome", "obrigatorio", "ativo")
+    list_filter = ("obrigatorio", "ativo")
+    search_fields = ("nome",)
 
 
 @admin.register(CacheCep)

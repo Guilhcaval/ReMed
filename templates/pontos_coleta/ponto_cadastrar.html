@@ -1,0 +1,406 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Parceria ReMed — Cadastro de instituição / ponto de coleta{% endblock %}
+
+{% block content %}
+  <div class="remed-auth-wrapper">
+    <section class="remed-card p-3 p-sm-4 p-md-5 shadow-sm" aria-labelledby="titulo-parceria">
+      <header class="text-center mb-4">
+        <div class="d-flex justify-content-center mb-2">
+          <img
+            src="{% static 'img/logo.png' %}"
+            alt="ReMed"
+            width="68"
+            height="72"
+            class="remed-auth-logo"
+            decoding="async"
+          >
+        </div>
+        <h1 id="titulo-parceria" class="h3 fw-bold remed-auth-title mb-1">Parceria ReMed</h1>
+        <p class="remed-hint mb-0">Cadastro de instituição / ponto de coleta</p>
+      </header>
+
+      <div class="remed-banner-neutral p-3 mb-4 d-flex gap-2 align-items-start" role="note">
+        <span class="remed-info-icon" aria-hidden="true">i</span>
+        <div class="small">
+          <strong class="d-block">Cadastro com responsável autenticado</strong>
+          O ponto será vinculado à sua conta ReMed já cadastrada. Não é necessário criar uma senha para a instituição.
+        </div>
+      </div>
+
+      {% if form.errors or formset_horarios.non_form_errors or formset_horarios.errors %}
+        <div class="remed-error-summary p-3 mb-4" role="alert" aria-live="polite">
+          <p class="fw-semibold mb-1">Revise os dados informados:</p>
+          <ul class="mb-0 ps-3 small">
+            {% for msg in form.mensagens_resumo_erros %}
+              <li>{{ msg }}</li>
+            {% endfor %}
+            {% for erro in formset_horarios.non_form_errors %}
+              <li>{{ erro }}</li>
+            {% endfor %}
+            {% for hform in formset_horarios %}
+              {% for field in hform %}
+                {% for erro in field.errors %}
+                  <li>{{ field.label }}: {{ erro }}</li>
+                {% endfor %}
+              {% endfor %}
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      <form method="post" action="{% url 'pontos_coleta:cadastrar' %}" novalidate>
+        {% csrf_token %}
+
+        <fieldset class="mb-4">
+          <legend class="remed-section-title mb-1">Dados da instituição</legend>
+          <p class="remed-hint mb-3">Os campos com * são obrigatórios.</p>
+
+          <div class="mb-3">
+            <label for="{{ form.cnpj.id_for_label }}" class="form-label fw-medium">
+              CNPJ <span class="remed-required-mark" aria-hidden="true">*</span>
+            </label>
+            {{ form.cnpj }}
+            <div class="remed-hint mt-1">Informe um CNPJ válido e ainda não cadastrado.</div>
+            {% if form.cnpj.errors %}
+              <div class="invalid-feedback d-block">{% for e in form.cnpj.errors %}{{ e }}{% endfor %}</div>
+            {% endif %}
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-12 col-md-6">
+              <label for="{{ form.razao_social.id_for_label }}" class="form-label fw-medium">
+                Razão social <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              {{ form.razao_social }}
+              {% if form.razao_social.errors %}
+                <div class="invalid-feedback d-block">{% for e in form.razao_social.errors %}{{ e }}{% endfor %}</div>
+              {% endif %}
+            </div>
+            <div class="col-12 col-md-6">
+              <label for="{{ form.nome_fantasia.id_for_label }}" class="form-label fw-medium">
+                Nome fantasia <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              {{ form.nome_fantasia }}
+              {% if form.nome_fantasia.errors %}
+                <div class="invalid-feedback d-block">{% for e in form.nome_fantasia.errors %}{{ e }}{% endfor %}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="{{ form.tipo_estabelecimento.id_for_label }}" class="form-label fw-medium">
+              Tipo de estabelecimento <span class="remed-required-mark" aria-hidden="true">*</span>
+            </label>
+            {{ form.tipo_estabelecimento }}
+            <div class="remed-hint mt-1">
+              Opções: Farmácia · Posto/Unidade de Saúde · Hospital · Clínica · ONG/Instituição Social · Outros
+            </div>
+            {% if form.tipo_estabelecimento.errors %}
+              <div class="invalid-feedback d-block">{% for e in form.tipo_estabelecimento.errors %}{{ e }}{% endfor %}</div>
+            {% endif %}
+          </div>
+
+          <div class="row g-3">
+            <div class="col-12 col-md-6">
+              <label for="{{ form.email.id_for_label }}" class="form-label fw-medium">
+                E-mail institucional <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              {{ form.email }}
+              {% if form.email.errors %}
+                <div class="invalid-feedback d-block">{% for e in form.email.errors %}{{ e }}{% endfor %}</div>
+              {% endif %}
+            </div>
+            <div class="col-12 col-md-6">
+              <label for="{{ form.telefone.id_for_label }}" class="form-label fw-medium">
+                Telefone <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              {{ form.telefone }}
+              {% if form.telefone.errors %}
+                <div class="invalid-feedback d-block">{% for e in form.telefone.errors %}{{ e }}{% endfor %}</div>
+              {% endif %}
+            </div>
+          </div>
+        </fieldset>
+
+        <hr class="remed-section-divider my-4">
+
+        <fieldset class="mb-4">
+          <legend class="remed-section-title mb-1">Endereço do ponto de coleta</legend>
+          <p class="remed-hint mb-3">
+            Informe o CEP para preencher o endereço automaticamente. Depois, edite o número e o complemento.
+          </p>
+
+          <div class="row g-3 align-items-end mb-2">
+            <div class="col-12 col-sm-5 col-md-4">
+              <label for="{{ form.cep.id_for_label }}" class="form-label fw-medium">
+                CEP <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              <input
+                type="text"
+                name="{{ form.cep.html_name }}"
+                id="{{ form.cep.id_for_label }}"
+                value="{{ form.cep.value|default_if_none:'' }}"
+                class="form-control{% if form.cep.errors %} is-invalid{% endif %}"
+                placeholder="00000-000"
+                inputmode="numeric"
+                maxlength="9"
+                data-mascara="cep"
+                data-cep-url-base="{% url 'nucleo:cep_consultar' cep='00000000' %}"
+                required
+              >
+            </div>
+            <div class="col-12 col-sm-7 col-md-8 pb-2">
+              <a
+                href="https://buscacepinter.correios.com.br/app/endereco/index.php"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="remed-cep-help-link"
+              >
+                Não sei meu CEP
+              </a>
+            </div>
+          </div>
+          <div id="cep-status-msg" class="remed-hint mb-3" aria-live="polite"></div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-12 col-md-8">
+              <label for="{{ form.logradouro.id_for_label }}" class="form-label fw-medium">
+                Logradouro <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              {{ form.logradouro }}
+            </div>
+            <div class="col-12 col-md-4">
+              <label for="{{ form.numero.id_for_label }}" class="form-label fw-medium">
+                Número <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              {{ form.numero }}
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-12 col-md-5">
+              <label for="{{ form.bairro.id_for_label }}" class="form-label fw-medium">
+                Bairro <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              {{ form.bairro }}
+            </div>
+            <div class="col-12 col-md-5">
+              <label for="{{ form.municipio.id_for_label }}" class="form-label fw-medium">
+                Município <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              {{ form.municipio }}
+            </div>
+            <div class="col-12 col-md-2">
+              <label for="{{ form.estado.id_for_label }}" class="form-label fw-medium">
+                Estado <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              {{ form.estado }}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="{{ form.complemento.id_for_label }}" class="form-label fw-medium">
+              Complemento (opcional)
+            </label>
+            {{ form.complemento }}
+          </div>
+
+          <div class="remed-banner-info p-3 d-flex gap-2 align-items-start small" role="note">
+            <span class="remed-info-icon" aria-hidden="true">i</span>
+            <span>O endereço do ponto de coleta é público e será exibido para orientar os encontros de retirada.</span>
+          </div>
+        </fieldset>
+
+        <hr class="remed-section-divider my-4">
+
+        <fieldset class="mb-4">
+          <legend class="remed-section-title mb-1">Funcionamento e estrutura</legend>
+          <p class="remed-hint mb-3">Informe os dias e horários disponíveis para os encontros de retirada.</p>
+
+          {{ formset_horarios.management_form }}
+          <div id="horarios-blocos-container" class="d-flex flex-column gap-3 mb-2">
+            {% for hform in formset_horarios %}
+              <div class="border rounded p-3 bg-light">
+                <p class="form-label fw-medium mb-2">
+                  Dias de funcionamento para retirada <span class="remed-required-mark" aria-hidden="true">*</span>
+                </p>
+                <div class="d-flex flex-wrap gap-3 mb-3">
+                  {% for checkbox in hform.dias %}
+                    <div class="form-check remed-check-touch">
+                      {{ checkbox.tag }}
+                      <label class="form-check-label" for="{{ checkbox.id_for_label }}">
+                        {{ checkbox.choice_label }}
+                      </label>
+                    </div>
+                  {% endfor %}
+                </div>
+                <div class="row g-3">
+                  <div class="col-12 col-sm-6">
+                    <label for="{{ hform.hora_abertura.id_for_label }}" class="form-label fw-medium">
+                      Abertura <span class="remed-required-mark" aria-hidden="true">*</span>
+                    </label>
+                    {{ hform.hora_abertura }}
+                  </div>
+                  <div class="col-12 col-sm-6">
+                    <label for="{{ hform.hora_fechamento.id_for_label }}" class="form-label fw-medium">
+                      Fechamento <span class="remed-required-mark" aria-hidden="true">*</span>
+                    </label>
+                    {{ hform.hora_fechamento }}
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+
+          <template id="horario-bloco-template">
+            <div class="border rounded p-3 bg-light">
+              <p class="form-label fw-medium mb-2">
+                Dias de funcionamento para retirada <span class="remed-required-mark" aria-hidden="true">*</span>
+              </p>
+              <div class="d-flex flex-wrap gap-3 mb-3">
+                {% for checkbox in formset_horarios.empty_form.dias %}
+                  <div class="form-check remed-check-touch">
+                    {{ checkbox.tag }}
+                    <label class="form-check-label" for="{{ checkbox.id_for_label }}">
+                      {{ checkbox.choice_label }}
+                    </label>
+                  </div>
+                {% endfor %}
+              </div>
+              <div class="row g-3">
+                <div class="col-12 col-sm-6">
+                  <label for="{{ formset_horarios.empty_form.hora_abertura.id_for_label }}" class="form-label fw-medium">
+                    Abertura <span class="remed-required-mark" aria-hidden="true">*</span>
+                  </label>
+                  {{ formset_horarios.empty_form.hora_abertura }}
+                </div>
+                <div class="col-12 col-sm-6">
+                  <label for="{{ formset_horarios.empty_form.hora_fechamento.id_for_label }}" class="form-label fw-medium">
+                    Fechamento <span class="remed-required-mark" aria-hidden="true">*</span>
+                  </label>
+                  {{ formset_horarios.empty_form.hora_fechamento }}
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3">
+            <span class="remed-hint">O horário informado vale para os dias selecionados.</span>
+            <button type="button" id="btn-adicionar-horario" class="remed-inline-link">
+              + Adicionar outro horário
+            </button>
+          </div>
+
+          <div class="mb-3">
+            <p class="form-label fw-medium mb-2">
+              Possui refrigeração para medicamentos? <span class="remed-required-mark" aria-hidden="true">*</span>
+            </p>
+            <div class="d-flex flex-wrap gap-4">
+              {% for radio in form.possui_refrigeracao %}
+                <div class="form-check remed-check-touch">
+                  {{ radio.tag }}
+                  <label class="form-check-label" for="{{ radio.id_for_label }}">
+                    {{ radio.choice_label }}
+                  </label>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="remed-banner-info p-3 d-flex gap-2 align-items-start small" role="note">
+            <span class="remed-info-icon" aria-hidden="true">i</span>
+            <span>
+              O ponto de coleta é apenas um local seguro de encontro para a retirada, não um local de
+              guarda temporária de medicamentos.
+            </span>
+          </div>
+        </fieldset>
+
+        <hr class="remed-section-divider my-4">
+
+        <fieldset class="mb-4">
+          <legend class="remed-section-title mb-1">Documentação e observações</legend>
+          <div class="remed-banner-neutral p-3 mb-3 small" role="note">
+            <strong>Passo 2 imediato (RF006):</strong> logo após salvar este formulário, você será
+            levado à tela de envio da <strong>Licença de funcionamento</strong> e do
+            <strong>Alvará sanitário</strong> (PDF, JPG ou PNG · máximo de 5 MB por arquivo).
+          </div>
+          <div class="mb-2">
+            <label for="{{ form.observacoes.id_for_label }}" class="form-label fw-medium">
+              Observações (opcional)
+            </label>
+            {{ form.observacoes }}
+          </div>
+        </fieldset>
+
+        <hr class="remed-section-divider my-4">
+
+        <fieldset class="mb-4">
+          <legend class="remed-section-title mb-1">Responsável pelo ponto de coleta</legend>
+          <p class="remed-hint mb-3">
+            Dados da sua conta autenticada, vinculada ao ponto. Para alterar, atualize seu cadastro de pessoa física.
+          </p>
+
+          <div class="border rounded p-3 bg-white mb-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+              <strong class="small">Sua conta ReMed</strong>
+              <span class="badge remed-badge-accent-soft">Usuário vinculado · autenticado</span>
+            </div>
+            <div class="row g-3">
+              <div class="col-12 col-md-6">
+                <label class="form-label small fw-medium" for="id_resp_cpf">CPF</label>
+                <input id="id_resp_cpf" type="text" class="form-control remed-readonly-field" value="{{ responsavel_atual.cpf }}" readonly>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label small fw-medium" for="id_resp_nome">Nome</label>
+                <input id="id_resp_nome" type="text" class="form-control remed-readonly-field" value="{{ responsavel_atual.nome }}" readonly>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label small fw-medium" for="id_resp_email">E-mail</label>
+                <input id="id_resp_email" type="text" class="form-control remed-readonly-field" value="{{ responsavel_atual.email }}" readonly>
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label small fw-medium" for="id_resp_contato">Contato</label>
+                <input id="id_resp_contato" type="text" class="form-control remed-readonly-field" value="{{ responsavel_atual.celular }}" readonly>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="{{ form.convidar_responsavel.id_for_label }}" class="form-label fw-medium">
+              + Adicionar outro responsável (opcional)
+            </label>
+            {{ form.convidar_responsavel }}
+            <div class="remed-hint mt-1">
+              Envia convite para uma conta ReMed já cadastrada; o vínculo só fica ativo após aceite.
+            </div>
+          </div>
+
+          <div class="remed-banner-info p-3 d-flex gap-2 align-items-start small mb-2" role="status">
+            <span class="remed-info-icon" aria-hidden="true">i</span>
+            <div>
+              <strong class="d-block">Status inicial automático: Pendente de aprovação</strong>
+              O administrador analisará os documentos. O ponto de coleta só será ativado após a aprovação do cadastro.
+            </div>
+          </div>
+          <p class="remed-hint mb-0">A data do cadastro é registrada automaticamente pelo sistema.</p>
+        </fieldset>
+
+        <div class="d-grid gap-2">
+          <button type="submit" class="btn remed-btn-accent fw-semibold">
+            Cadastrar ponto de coleta e avançar para documentos
+          </button>
+          <div class="text-center mt-1">
+            <a href="{% url 'contas:perfil_editar' %}" class="link-secondary small">Voltar para minha conta</a>
+          </div>
+        </div>
+      </form>
+    </section>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'js/ponto_coleta.js' %}" defer></script>
+{% endblock %}

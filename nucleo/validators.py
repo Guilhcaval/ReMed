@@ -83,6 +83,46 @@ def mascarar_cpf(cpf_digitos: str | None) -> str:
     return f"{digitos[:3]}.***.***-{digitos[9:]}"
 
 
+def validar_cnpj(valor: str) -> str:
+    """Valida CNPJ (14 dígitos + dígitos verificadores) retornando apenas dígitos (RF005)."""
+    digitos = somente_digitos(valor)
+    if len(digitos) != 14 or len(set(digitos)) == 1:
+        raise ValueError("Informe um CNPJ válido com 14 dígitos.")
+
+    pesos_1 = (5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2)
+    soma_1 = sum(int(digitos[i]) * pesos_1[i] for i in range(12))
+    resto_1 = soma_1 % 11
+    dv_1 = 0 if resto_1 < 2 else 11 - resto_1
+
+    pesos_2 = (6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2)
+    soma_2 = sum(int(digitos[i]) * pesos_2[i] for i in range(13))
+    resto_2 = soma_2 % 11
+    dv_2 = 0 if resto_2 < 2 else 11 - resto_2
+
+    if dv_1 != int(digitos[12]) or dv_2 != int(digitos[13]):
+        raise ValueError("Informe um CNPJ válido com dígitos verificadores corretos.")
+
+    return digitos
+
+
+def formatar_cnpj(cnpj_digitos: str) -> str:
+    digitos = somente_digitos(cnpj_digitos)
+    if len(digitos) != 14:
+        return cnpj_digitos
+    return f"{digitos[:2]}.{digitos[2:5]}.{digitos[5:8]}/{digitos[8:12]}-{digitos[12:]}"
+
+
+def validar_telefone(valor: str) -> str:
+    """Valida telefone institucional brasileiro com DDD (10 ou 11 dígitos)."""
+    digitos = somente_digitos(valor)
+    if len(digitos) not in {10, 11} or len(set(digitos)) == 1:
+        raise ValueError("Informe um telefone válido com DDD (10 ou 11 dígitos).")
+    ddd = int(digitos[:2])
+    if ddd < 11 or ddd > 99:
+        raise ValueError("Informe um DDD válido para o telefone.")
+    return digitos
+
+
 def validar_cep(valor: str) -> str:
     digitos = somente_digitos(valor)
     if len(digitos) != 8:

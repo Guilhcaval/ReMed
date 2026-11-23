@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Editar ponto de coleta · ReMed{% endblock %}
+
+{% block content %}
+  <div class="remed-auth-wrapper">
+    <div class="mb-3">
+      <a href="{% url 'pontos_coleta:meus_pontos' %}" class="link-primary small fw-medium">
+        &larr; Voltar para Meus pontos
+      </a>
+    </div>
+
+    <section class="remed-card p-3 p-sm-4 p-md-5 shadow-sm" aria-labelledby="titulo-editar-ponto">
+      <header class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-4">
+        <div>
+          <h1 id="titulo-editar-ponto" class="h3 fw-bold remed-auth-title mb-1">Editar ponto de coleta</h1>
+          <p class="remed-hint mb-0">{{ ponto.nome_fantasia }}</p>
+        </div>
+        <span class="badge remed-status-badge remed-status-{{ ponto.status }} px-3 py-2">
+          {{ ponto.get_status_display }}
+        </span>
+      </header>
+
+      {% if ponto.status == "ativo" %}
+        <div class="alert alert-warning small" role="note">
+          <strong>Atenção:</strong> alterar o endereço de um ponto já ativo devolve automaticamente o
+          cadastro para <strong>Pendente de aprovação</strong> até nova conferência do Administrador.
+        </div>
+      {% endif %}
+
+      {% if form.errors or formset_horarios.non_form_errors or formset_horarios.errors %}
+        <div class="remed-error-summary p-3 mb-4" role="alert" aria-live="polite">
+          <p class="fw-semibold mb-1">Revise os dados informados:</p>
+          <ul class="mb-0 ps-3 small">
+            {% for msg in form.mensagens_resumo_erros %}
+              <li>{{ msg }}</li>
+            {% endfor %}
+            {% for erro in formset_horarios.non_form_errors %}
+              <li>{{ erro }}</li>
+            {% endfor %}
+            {% for hform in formset_horarios %}
+              {% for field in hform %}
+                {% for erro in field.errors %}
+                  <li>{{ field.label }}: {{ erro }}</li>
+                {% endfor %}
+              {% endfor %}
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      <form method="post" action="{% url 'pontos_coleta:editar' ponto_id=ponto.pk %}" novalidate>
+        {% csrf_token %}
+
+        <fieldset class="mb-4">
+          <legend class="remed-section-title mb-3">Dados da instituição</legend>
+
+          <div class="mb-3">
+            <label for="id_cnpj_fixo" class="form-label fw-medium">CNPJ (somente leitura)</label>
+            <input id="id_cnpj_fixo" type="text" class="form-control remed-readonly-field" value="{{ cnpj_formatado }}" readonly>
+            <div class="remed-hint mt-1">
+              O CNPJ somente pode ser alterado por um Administrador de pontos de coleta mediante motivo registrado.
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-12 col-md-6">
+              <label for="{{ form.razao_social.id_for_label }}" class="form-label fw-medium">Razão social *</label>
+              {{ form.razao_social }}
+            </div>
+            <div class="col-12 col-md-6">
+              <label for="{{ form.nome_fantasia.id_for_label }}" class="form-label fw-medium">Nome fantasia *</label>
+              {{ form.nome_fantasia }}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="{{ form.tipo_estabelecimento.id_for_label }}" class="form-label fw-medium">Tipo de estabelecimento *</label>
+            {{ form.tipo_estabelecimento }}
+          </div>
+
+          <div class="row g-3">
+            <div class="col-12 col-md-6">
+              <label for="{{ form.email.id_for_label }}" class="form-label fw-medium">E-mail institucional *</label>
+              {{ form.email }}
+            </div>
+            <div class="col-12 col-md-6">
+              <label for="{{ form.telefone.id_for_label }}" class="form-label fw-medium">Telefone *</label>
+              {{ form.telefone }}
+            </div>
+          </div>
+        </fieldset>
+
+        <hr class="remed-section-divider my-4">
+
+        <fieldset class="mb-4">
+          <legend class="remed-section-title mb-3">Endereço público</legend>
+
+          <div class="row g-3 align-items-end mb-2">
+            <div class="col-12 col-sm-5 col-md-4">
+              <label for="{{ form.cep.id_for_label }}" class="form-label fw-medium">CEP *</label>
+              <input
+                type="text"
+                name="{{ form.cep.html_name }}"
+                id="{{ form.cep.id_for_label }}"
+                value="{{ form.cep.value|default_if_none:'' }}"
+                class="form-control"
+                inputmode="numeric"
+                maxlength="9"
+                data-mascara="cep"
+                data-cep-url-base="{% url 'nucleo:cep_consultar' cep='00000000' %}"
+                required
+              >
+            </div>
+          </div>
+          <div id="cep-status-msg" class="remed-hint mb-3" aria-live="polite"></div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-12 col-md-8">
+              <label for="{{ form.logradouro.id_for_label }}" class="form-label fw-medium">Logradouro *</label>
+              {{ form.logradouro }}
+            </div>
+            <div class="col-12 col-md-4">
+              <label for="{{ form.numero.id_for_label }}" class="form-label fw-medium">Número *</label>
+              {{ form.numero }}
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-12 col-md-5">
+              <label for="{{ form.bairro.id_for_label }}" class="form-label fw-medium">Bairro *</label>
+              {{ form.bairro }}
+            </div>
+            <div class="col-12 col-md-5">
+              <label for="{{ form.municipio.id_for_label }}" class="form-label fw-medium">Município *</label>
+              {{ form.municipio }}
+            </div>
+            <div class="col-12 col-md-2">
+              <label for="{{ form.estado.id_for_label }}" class="form-label fw-medium">Estado *</label>
+              {{ form.estado }}
+            </div>
+          </div>
+
+          <div class="mb-2">
+            <label for="{{ form.complemento.id_for_label }}" class="form-label fw-medium">Complemento (opcional)</label>
+            {{ form.complemento }}
+          </div>
+        </fieldset>
+
+        <hr class="remed-section-divider my-4">
+
+        <fieldset class="mb-4">
+          <legend class="remed-section-title mb-3">Funcionamento e estrutura</legend>
+          {{ formset_horarios.management_form }}
+          <div id="horarios-blocos-container" class="d-flex flex-column gap-3 mb-2">
+            {% for hform in formset_horarios %}
+              <div class="border rounded p-3 bg-light">
+                <p class="form-label fw-medium mb-2">Dias de funcionamento *</p>
+                <div class="d-flex flex-wrap gap-3 mb-3">
+                  {% for checkbox in hform.dias %}
+                    <div class="form-check remed-check-touch">
+                      {{ checkbox.tag }}
+                      <label class="form-check-label" for="{{ checkbox.id_for_label }}">
+                        {{ checkbox.choice_label }}
+                      </label>
+                    </div>
+                  {% endfor %}
+                </div>
+                <div class="row g-3">
+                  <div class="col-12 col-sm-6">
+                    <label for="{{ hform.hora_abertura.id_for_label }}" class="form-label fw-medium">Abertura *</label>
+                    {{ hform.hora_abertura }}
+                  </div>
+                  <div class="col-12 col-sm-6">
+                    <label for="{{ hform.hora_fechamento.id_for_label }}" class="form-label fw-medium">Fechamento *</label>
+                    {{ hform.hora_fechamento }}
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+
+          <template id="horario-bloco-template">
+            <div class="border rounded p-3 bg-light">
+              <p class="form-label fw-medium mb-2">Dias de funcionamento *</p>
+              <div class="d-flex flex-wrap gap-3 mb-3">
+                {% for checkbox in formset_horarios.empty_form.dias %}
+                  <div class="form-check remed-check-touch">
+                    {{ checkbox.tag }}
+                    <label class="form-check-label" for="{{ checkbox.id_for_label }}">
+                      {{ checkbox.choice_label }}
+                    </label>
+                  </div>
+                {% endfor %}
+              </div>
+              <div class="row g-3">
+                <div class="col-12 col-sm-6">
+                  <label for="{{ formset_horarios.empty_form.hora_abertura.id_for_label }}" class="form-label fw-medium">Abertura *</label>
+                  {{ formset_horarios.empty_form.hora_abertura }}
+                </div>
+                <div class="col-12 col-sm-6">
+                  <label for="{{ formset_horarios.empty_form.hora_fechamento.id_for_label }}" class="form-label fw-medium">Fechamento *</label>
+                  {{ formset_horarios.empty_form.hora_fechamento }}
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <div class="mb-3 text-end">
+            <button type="button" id="btn-adicionar-horario" class="remed-inline-link">
+              + Adicionar outro horário
+            </button>
+          </div>
+
+          <div class="mb-3">
+            <p class="form-label fw-medium mb-2">Possui refrigeração para medicamentos? *</p>
+            <div class="d-flex flex-wrap gap-4">
+              {% for radio in form.possui_refrigeracao %}
+                <div class="form-check remed-check-touch">
+                  {{ radio.tag }}
+                  <label class="form-check-label" for="{{ radio.id_for_label }}">
+                    {{ radio.choice_label }}
+                  </label>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="mb-2">
+            <label for="{{ form.observacoes.id_for_label }}" class="form-label fw-medium">Observações (opcional)</label>
+            {{ form.observacoes }}
+          </div>
+        </fieldset>
+
+        <div class="d-flex flex-wrap gap-2">
+          <button type="submit" class="btn btn-primary fw-semibold px-4">Salvar alterações</button>
+          <a href="{% url 'pontos_coleta:documentos' ponto_id=ponto.pk %}" class="btn btn-outline-primary">
+            Ver documentos
+          </a>
+        </div>
+      </form>
+    </section>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'js/ponto_coleta.js' %}" defer></script>
+{% endblock %}

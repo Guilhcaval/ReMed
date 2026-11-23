@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Documentos do ponto de coleta · ReMed{% endblock %}
+
+{% block content %}
+  <div class="remed-admin-wrapper">
+    <div class="mb-3">
+      <a href="{% url 'pontos_coleta:meus_pontos' %}" class="link-primary small fw-medium">
+        &larr; Voltar para Meus pontos
+      </a>
+    </div>
+
+    <section class="remed-card p-3 p-sm-4 p-md-5 shadow-sm mb-4" aria-labelledby="titulo-documentos-ponto">
+      <header class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-2 mb-4">
+        <div>
+          <h1 id="titulo-documentos-ponto" class="h3 fw-bold remed-auth-title mb-1">
+            Documentos · {{ ponto.nome_fantasia }}
+          </h1>
+          <p class="remed-hint mb-0">
+            Envie a Licença de funcionamento e o Alvará sanitário para liberar o cadastro para análise.
+          </p>
+        </div>
+        <span class="badge remed-status-badge remed-status-{{ ponto.status }} px-3 py-2">
+          {{ ponto.get_status_display }}
+        </span>
+      </header>
+
+      <div class="row g-3 mb-4">
+        {% for item in situacao.itens %}
+          <div class="col-12 col-md-6">
+            <div class="border rounded p-3 h-100 bg-light">
+              <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+                <strong class="small">{{ item.tipo.nome }}</strong>
+                {% if item.ultima_versao %}
+                  <span class="badge remed-status-badge remed-status-{{ item.ultima_versao.status }}">
+                    {{ item.ultima_versao.get_status_display }}
+                  </span>
+                {% else %}
+                  <span class="badge remed-status-badge remed-status-suspenso">Pendente de envio</span>
+                {% endif %}
+              </div>
+              {% if item.ultima_versao %}
+                <p class="small text-secondary mb-0">
+                  Versão {{ item.ultima_versao.versao }} · Nº {{ item.ultima_versao.numero_documento }} ·
+                  Validade: {{ item.ultima_versao.data_validade|date:"d/m/Y" }}
+                </p>
+              {% else %}
+                <p class="small text-secondary mb-0">Obrigatório para análise do Administrador.</p>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      {% if form.errors %}
+        <div class="remed-error-summary p-3 mb-4 small" role="alert" aria-live="polite">
+          <ul class="mb-0 ps-3">
+            {% for msg in form.mensagens_resumo_erros %}
+              <li>{{ msg }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      <form
+        method="post"
+        action="{% url 'pontos_coleta:documentos' ponto_id=ponto.pk %}"
+        enctype="multipart/form-data"
+        class="border rounded p-3 p-md-4 bg-white mb-4"
+        novalidate
+      >
+        {% csrf_token %}
+        <h2 class="remed-section-title mb-2">Enviar ou substituir documento</h2>
+        <p class="remed-hint mb-3">
+          Formatos aceitos: <strong>PDF, JPG ou PNG</strong> · Tamanho máximo: <strong>5 MB</strong>.
+          Documentos reprovados ou vencidos podem ser substituídos sem apagar as versões anteriores.
+        </p>
+
+        <div class="row g-3 mb-3">
+          <div class="col-12 col-md-4">
+            <label for="{{ form.tipo_documento.id_for_label }}" class="form-label fw-medium">
+              {{ form.tipo_documento.label }} <span class="remed-required-mark" aria-hidden="true">*</span>
+            </label>
+            {{ form.tipo_documento }}
+          </div>
+          <div class="col-12 col-md-4">
+            <label for="{{ form.numero_documento.id_for_label }}" class="form-label fw-medium">
+              {{ form.numero_documento.label }} <span class="remed-required-mark" aria-hidden="true">*</span>
+            </label>
+            {{ form.numero_documento }}
+          </div>
+          <div class="col-12 col-md-4">
+            <label for="{{ form.data_validade.id_for_label }}" class="form-label fw-medium">
+              {{ form.data_validade.label }} <span class="remed-required-mark" aria-hidden="true">*</span>
+            </label>
+            {{ form.data_validade }}
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label for="{{ form.arquivo.id_for_label }}" class="form-label fw-medium">
+            {{ form.arquivo.label }} <span class="remed-required-mark" aria-hidden="true">*</span>
+          </label>
+          {{ form.arquivo }}
+        </div>
+
+        <button type="submit" class="btn remed-btn-accent fw-semibold px-4">Enviar documento</button>
+      </form>
+
+      <h2 class="remed-section-title mb-3">Histórico de versões enviadas</h2>
+      {% if documentos %}
+        <div class="table-responsive">
+          <table class="table align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th scope="col">Tipo</th>
+                <th scope="col">Versão</th>
+                <th scope="col">Número</th>
+                <th scope="col">Validade</th>
+                <th scope="col">Status</th>
+                <th scope="col">Enviado em</th>
+                <th scope="col" class="text-end">Arquivo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for doc in documentos %}
+                <tr>
+                  <td class="fw-medium">{{ doc.tipo_documento.nome }}</td>
+                  <td>v{{ doc.versao }}</td>
+                  <td>{{ doc.numero_documento }}</td>
+                  <td class="text-nowrap">{{ doc.data_validade|date:"d/m/Y" }}</td>
+                  <td>
+                    <span class="badge remed-status-badge remed-status-{{ doc.status }}">
+                      {{ doc.get_status_display }}
+                    </span>
+                  </td>
+                  <td class="small text-secondary text-nowrap">{{ doc.enviado_em|date:"d/m/Y H:i" }}</td>
+                  <td class="text-end">
+                    <a
+                      href="{% url 'pontos_coleta:documento_acessar' doc_id=doc.pk %}"
+                      class="btn btn-outline-primary btn-sm"
+                    >
+                      Baixar (60 s)
+                    </a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="remed-hint mb-0">Nenhum documento enviado para este ponto até o momento.</p>
+      {% endif %}
+    </section>
+  </div>
+{% endblock %}

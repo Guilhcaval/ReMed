@@ -2,34 +2,6 @@
 
 {% block title %}Gestão de usuários · ReMed{% endblock %}
 
-{% block navbar_links %}
-  <ul class="navbar-nav ms-auto align-items-lg-center gap-2">
-    <li class="nav-item">
-      <a class="nav-link" href="{% url 'notificacoes:lista' %}">
-        Notificações
-        {% if notificacoes_nao_lidas > 0 %}
-          <span class="badge rounded-pill remed-badge-unread ms-1">{{ notificacoes_nao_lidas }}</span>
-          <span class="visually-hidden">não lidas</span>
-        {% endif %}
-      </a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link active fw-medium" aria-current="page" href="{% url 'contas:admin_usuario_lista' %}">
-        Gestão de usuários
-      </a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link" href="{% url 'contas:perfil_editar' %}">Meu perfil</a>
-    </li>
-    <li class="nav-item">
-      <form method="post" action="{% url 'contas:logout' %}" class="d-inline">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-outline-secondary btn-sm">Sair</button>
-      </form>
-    </li>
-  </ul>
-{% endblock %}
-
 {% block content %}
   <div class="remed-admin-wrapper">
     <section class="remed-card p-3 p-sm-4 p-md-5 shadow-sm" aria-labelledby="titulo-gestao-usuarios">

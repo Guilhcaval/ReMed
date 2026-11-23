@@ -3,21 +3,6 @@
 
 {% block title %}Entrar no ReMed{% endblock %}
 
-{% block navbar_links %}
-  <ul class="navbar-nav ms-auto align-items-lg-center gap-2">
-    <li class="nav-item">
-      <a class="nav-link active fw-medium" aria-current="page" href="{% url 'contas:login' %}">
-        Entrar
-      </a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link" href="{% url 'contas:cadastro' %}">
-        Criar conta
-      </a>
-    </li>
-  </ul>
-{% endblock %}
-
 {% block content %}
   <div class="remed-auth-wrapper-sm">
     <section class="remed-card p-3 p-sm-4 p-md-5 shadow-sm" aria-labelledby="titulo-login">
@@ -35,6 +20,20 @@
         <h1 id="titulo-login" class="h3 fw-bold remed-auth-title mb-1">Entrar no ReMed</h1>
         <p class="remed-hint mb-0">Acesse sua conta para continuar.</p>
       </header>
+
+      {% if aviso_cadastro_ponto_coleta %}
+        <div class="alert alert-info mb-4" role="status">
+          <p class="mb-2">
+            Para cadastrar um Ponto de Coleta (Pessoa Jurídica), entre primeiro com sua conta de
+            Pessoa Física — pontos de coleta são vinculados a um responsável e não possuem senha
+            própria.
+          </p>
+          <p class="mb-0">
+            Ainda não tem conta?
+            <a href="{% url 'contas:cadastro' %}" class="alert-link">Crie sua conta de Pessoa Física primeiro</a>.
+          </p>
+        </div>
+      {% endif %}
 
       {% if form.errors %}
         <div class="remed-error-summary p-3 mb-4" role="alert" aria-live="polite">

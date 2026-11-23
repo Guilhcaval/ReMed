@@ -3,26 +3,6 @@
 
 {% block title %}Criar conta · ReMed — Cadastro de pessoa física{% endblock %}
 
-{% block navbar_links %}
-  <ul class="navbar-nav ms-auto align-items-lg-center gap-2">
-    <li class="nav-item">
-      <a class="nav-link" href="{% url 'contas:login' %}">
-        Entrar
-      </a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link active fw-medium" aria-current="page" href="{% url 'contas:cadastro' %}">
-        Criar conta
-      </a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link" href="{% url 'contas:reenviar_confirmacao' %}">
-        Reenviar confirmação
-      </a>
-    </li>
-  </ul>
-{% endblock %}
-
 {% block content %}
   <div class="remed-auth-wrapper">
     <section class="remed-card p-3 p-sm-4 p-md-5 shadow-sm" aria-labelledby="titulo-cadastro">
@@ -52,16 +32,14 @@
           </span>
         </div>
         <div class="col-12 col-sm-6">
-          <span
-            class="remed-tab-item is-disabled d-flex flex-wrap align-items-center justify-content-center text-center gap-2 w-100"
+          <a
+            href="{% url 'pontos_coleta:cadastrar' %}"
+            class="remed-tab-item d-flex align-items-center justify-content-center text-center text-decoration-none text-secondary w-100"
             role="tab"
             aria-selected="false"
-            aria-disabled="true"
-            title="Cadastro de Pessoa Jurídica / Ponto de Coleta disponível em breve (Spec 05)"
           >
-            <span>Pessoa Jurídica · Ponto de Coleta</span>
-            <span class="badge text-bg-secondary fw-normal">Em breve</span>
-          </span>
+            <span><strong class="fw-semibold">Pessoa Jurídica</strong> · Ponto de Coleta</span>
+          </a>
         </div>
       </div>
 

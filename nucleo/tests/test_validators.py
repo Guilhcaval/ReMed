@@ -7,11 +7,14 @@ from django.test import SimpleTestCase
 from nucleo.validators import (
     formatar_celular,
     formatar_cep,
+    formatar_cnpj,
     formatar_cpf,
     validar_celular,
     validar_cep,
+    validar_cnpj,
     validar_cpf,
     validar_maioridade,
+    validar_telefone,
     validar_uf,
 )
 
@@ -54,3 +57,15 @@ class ValidatorsTest(SimpleTestCase):
         self.assertEqual(validar_uf("sp"), "SP")
         with self.assertRaises(ValueError):
             validar_uf("XX")
+
+    def test_validar_cnpj_e_telefone(self):
+        self.assertEqual(validar_cnpj("11.222.333/0001-81"), "11222333000181")
+        self.assertEqual(formatar_cnpj("11222333000181"), "11.222.333/0001-81")
+        for invalido in ("00.000.000/0000-00", "11.222.333/0001-82", "12345"):
+            with self.subTest(cnpj=invalido):
+                with self.assertRaises(ValueError):
+                    validar_cnpj(invalido)
+
+        self.assertEqual(validar_telefone("(11) 3333-4444"), "1133334444")
+        with self.assertRaises(ValueError):
+            validar_telefone("0033334444")
