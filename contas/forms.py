@@ -4,17 +4,21 @@ from django import forms
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 
+from contas.models import FUNCOES_ADMINISTRATIVAS, StatusUsuario
 from contas.services import (
     NOME_MAX_CARACTERES,
     NOME_MIN_CARACTERES,
+    ROTULOS_FUNCOES_ADMIN,
     SENHA_MIN_CARACTERES,
     DadosAtualizacaoPerfil,
     DadosCadastroUsuario,
     DadosEndereco,
+    FiltrosConsultaUsuarios,
 )
 from nucleo.validators import (
     UFS_BRASIL,
     normalizar_email,
+    somente_digitos,
     validar_celular,
     validar_cep,
     validar_cpf,
@@ -475,3 +479,295 @@ class UsuarioEncerrarContaForm(_ResumoErrosMixin, forms.Form):
         error_messages={"required": "Confirme que compreende a irreversibilidade do encerramento."},
         widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
     )
+
+
+class LoginForm(_ResumoErrosMixin, forms.Form):
+    """Formulário de entrada por E-mail ou CPF (sem CNPJ — ADR 0007 / Spec 02)."""
+
+    identificador = forms.CharField(
+        label="E-mail ou CPF",
+        required=True,
+        max_length=254,
+        error_messages={"required": MSG_CAMPO_OBRIGATORIO},
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Digite seu e-mail ou CPF",
+                "autocomplete": "username",
+            }
+        ),
+    )
+    senha = forms.CharField(
+        label="Senha",
+        required=True,
+        error_messages={"required": MSG_CAMPO_OBRIGATORIO},
+        widget=forms.PasswordInput(
+            render_value=False,
+            attrs={
+                "class": "form-control",
+                "placeholder": "Digite sua senha",
+                "autocomplete": "current-password",
+            },
+        ),
+    )
+
+
+class TotpCodigoForm(_ResumoErrosMixin, forms.Form):
+    """Formulário de código TOTP de 6 dígitos (pareamento, login 2FA e step-up)."""
+
+    codigo = forms.CharField(
+        label="Código do aplicativo autenticador",
+        required=True,
+        max_length=12,
+        error_messages={"required": MSG_CAMPO_OBRIGATORIO},
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "000000",
+                "inputmode": "numeric",
+                "autocomplete": "one-time-code",
+                "maxlength": "12",
+            }
+        ),
+    )
+
+
+class TotpRecuperacaoForm(_ResumoErrosMixin, forms.Form):
+    """Formulário de código de recuperação alfanumérico de uso único."""
+
+    codigo_recuperacao = forms.CharField(
+        label="Código de recuperação",
+        required=True,
+        max_length=20,
+        error_messages={"required": MSG_CAMPO_OBRIGATORIO},
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control text-uppercase",
+                "placeholder": "XXXX-XXXX",
+                "autocomplete": "off",
+                "maxlength": "20",
+            }
+        ),
+    )
+
+
+OPCOES_PERFIL_CONSULTA = (
+    ("", "Todos os perfis/funções"),
+    ("doador", "Doador"),
+    ("solicitante", "Solicitante"),
+    ("cuidador", "Cuidador/Familiar"),
+    *((nome, f"Admin: {ROTULOS_FUNCOES_ADMIN[nome]}") for nome in FUNCOES_ADMINISTRATIVAS),
+)
+OPCOES_STATUS_CONSULTA = (("", "Todos os status"), *StatusUsuario.choices)
+OPCOES_FUNCOES_ADMIN = tuple(
+    (nome, ROTULOS_FUNCOES_ADMIN[nome]) for nome in FUNCOES_ADMINISTRATIVAS
+)
+
+
+class AdminUsuarioConsultaForm(forms.Form):
+    """Filtros de pesquisa administrativa de usuários (RF004 / RN-04-07)."""
+
+    termo = forms.CharField(
+        label="Nome ou CPF parcial",
+        required=False,
+        max_length=120,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Nome ou ao menos 3 dígitos do CPF",
+            }
+        ),
+    )
+    email = forms.CharField(
+        label="E-mail",
+        required=False,
+        max_length=254,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Trecho do e-mail",
+            }
+        ),
+    )
+    perfil = forms.ChoiceField(
+        label="Perfil / Função",
+        required=False,
+        choices=OPCOES_PERFIL_CONSULTA,
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+    status = forms.ChoiceField(
+        label="Status",
+        required=False,
+        choices=OPCOES_STATUS_CONSULTA,
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+    data_inicio = forms.DateField(
+        label="Cadastrado de",
+        required=False,
+        input_formats=["%Y-%m-%d", "%d/%m/%Y"],
+        widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date", "class": "form-control"}),
+    )
+    data_fim = forms.DateField(
+        label="Até",
+        required=False,
+        input_formats=["%Y-%m-%d", "%d/%m/%Y"],
+        widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date", "class": "form-control"}),
+    )
+
+    def clean_termo(self) -> str:
+        valor = (self.cleaned_data.get("termo") or "").strip()
+        if valor:
+            somente_chars_cpf = all(ch.isdigit() or ch in ".- " for ch in valor)
+            digitos = somente_digitos(valor)
+            if somente_chars_cpf and digitos and len(digitos) < 3:
+                raise ValidationError("Informe ao menos 3 dígitos para pesquisar por CPF parcial.")
+        return valor
+
+    def clean(self):
+        cleaned = super().clean()
+        inicio = cleaned.get("data_inicio")
+        fim = cleaned.get("data_fim")
+        if inicio is not None and fim is not None and inicio > fim:
+            raise ValidationError("A data inicial não pode ser posterior à data final")
+        return cleaned
+
+    def para_filtros(self) -> FiltrosConsultaUsuarios:
+        return FiltrosConsultaUsuarios(
+            termo=self.cleaned_data.get("termo", ""),
+            email=self.cleaned_data.get("email", ""),
+            perfil=self.cleaned_data.get("perfil", ""),
+            status=self.cleaned_data.get("status", ""),
+            data_inicio=self.cleaned_data.get("data_inicio"),
+            data_fim=self.cleaned_data.get("data_fim"),
+        )
+
+
+class AdminAlterarStatusForm(_ResumoErrosMixin, forms.Form):
+    """Formulário de alteração de status administrativo (RF004 / RN-04-02 / RN-04-03)."""
+
+    novo_status = forms.ChoiceField(
+        label="Novo status",
+        required=True,
+        choices=StatusUsuario.choices,
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+    motivo = forms.CharField(
+        label="Motivo",
+        required=False,
+        max_length=500,
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control",
+                "rows": 3,
+                "placeholder": "Descreva o motivo objetivo da ação administrativa.",
+            }
+        ),
+    )
+
+    def clean(self):
+        cleaned = super().clean()
+        status = cleaned.get("novo_status")
+        motivo = (cleaned.get("motivo") or "").strip()
+        if not motivo:
+            if status in {StatusUsuario.SUSPENSO, StatusUsuario.BLOQUEADO}:
+                self.add_error(
+                    "motivo",
+                    ValidationError(
+                        "Informe o motivo da suspensão ou do bloqueio",
+                        code="regra_negocio",
+                    ),
+                )
+            else:
+                self.add_error(
+                    "motivo",
+                    ValidationError(
+                        "Informe o motivo da alteração de status.",
+                        code="regra_negocio",
+                    ),
+                )
+        cleaned["motivo"] = motivo
+        return cleaned
+
+
+class AdminAlterarFuncoesForm(_ResumoErrosMixin, forms.Form):
+    """Atribuição/remoção das 8 funções administrativas com step-up 2FA (RF004 / ADR 0010)."""
+
+    funcoes = forms.MultipleChoiceField(
+        label="Funções administrativas",
+        required=False,
+        choices=OPCOES_FUNCOES_ADMIN,
+        widget=forms.CheckboxSelectMultiple(attrs={"class": "form-check-input"}),
+    )
+    motivo = forms.CharField(
+        label="Motivo",
+        required=True,
+        max_length=500,
+        error_messages={"required": "Informe o motivo da alteração de funções administrativas."},
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control",
+                "rows": 2,
+                "placeholder": "Justificativa para atribuição ou remoção das funções.",
+            }
+        ),
+    )
+    codigo_step_up = forms.CharField(
+        label="Código TOTP atual (reconfirmação 2FA)",
+        required=True,
+        max_length=12,
+        error_messages={"required": MSG_CAMPO_OBRIGATORIO},
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "000000",
+                "inputmode": "numeric",
+                "autocomplete": "one-time-code",
+                "maxlength": "12",
+            }
+        ),
+    )
+
+    def clean_motivo(self) -> str:
+        valor = (self.cleaned_data.get("motivo") or "").strip()
+        if not valor:
+            raise ValidationError("Informe o motivo da alteração de funções administrativas.")
+        return valor
+
+
+class AdminResetar2faForm(_ResumoErrosMixin, forms.Form):
+    """Reset de 2FA de outro Administrador mediante motivo e step-up 2FA (ADR 0009)."""
+
+    motivo = forms.CharField(
+        label="Motivo do reset de 2FA",
+        required=True,
+        max_length=500,
+        error_messages={"required": "Informe o motivo do reset de 2FA."},
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control",
+                "rows": 2,
+                "placeholder": "Ex.: perda de dispositivo confirmada pela equipe.",
+            }
+        ),
+    )
+    codigo_step_up = forms.CharField(
+        label="Seu código TOTP atual (reconfirmação 2FA)",
+        required=True,
+        max_length=12,
+        error_messages={"required": MSG_CAMPO_OBRIGATORIO},
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "000000",
+                "inputmode": "numeric",
+                "autocomplete": "one-time-code",
+                "maxlength": "12",
+            }
+        ),
+    )
+
+    def clean_motivo(self) -> str:
+        valor = (self.cleaned_data.get("motivo") or "").strip()
+        if not valor:
+            raise ValidationError("Informe o motivo do reset de 2FA.")
+        return valor

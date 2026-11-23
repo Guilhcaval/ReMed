@@ -1,0 +1,10 @@
+Olá,
+
+{{ titulo }}
+
+{{ mensagem }}
+
+Acesse sua conta no ReMed para conferir os detalhes com segurança.
+Esta mensagem é automática e não contém dados pessoais sensíveis.
+
+Equipe ReMed

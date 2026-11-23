@@ -27,6 +27,29 @@ class TipoTokenConfirmacao(models.TextChoices):
     ALTERACAO_EMAIL = "alteracao_email", "Confirmação de alteração de e-mail"
 
 
+class EtapaAcesso(models.TextChoices):
+    SENHA = "senha", "Senha"
+    TOTP = "totp", "Código TOTP"
+    CODIGO_RECUPERACAO = "codigo_recuperacao", "Código de recuperação"
+    STEP_UP = "step_up", "Reconfirmação 2FA (step-up)"
+
+
+class ResultadoAcesso(models.TextChoices):
+    SUCESSO = "sucesso", "Sucesso"
+    FALHA = "falha", "Falha"
+    BLOQUEADO = "bloqueado", "Bloqueado"
+
+
+class TipoAcaoGestaoUsuario(models.TextChoices):
+    ATIVAR = "ativar", "Ativar"
+    INATIVAR = "inativar", "Inativar"
+    SUSPENDER = "suspender", "Suspender"
+    BLOQUEAR = "bloquear", "Bloquear"
+    DESBLOQUEAR = "desbloquear", "Desbloquear"
+    ALTERAR_FUNCOES_ADMIN = "alterar_funcoes_admin", "Alterar funções administrativas"
+    RESETAR_2FA = "resetar_2fa", "Resetar 2FA"
+
+
 class UsuarioManager(BaseUserManager):
     def create_user(
         self,
@@ -225,3 +248,162 @@ class TokenConfirmacaoEmail(models.Model):
 
     def __str__(self) -> str:
         return f"Token #{self.pk} ({self.tipo})"
+
+
+class RegistroAcesso(models.Model):
+    """Registro append-only de tentativas de autenticação e 2FA (ADR 0009 / ADR 0011)."""
+
+    criado_em = models.DateTimeField(auto_now_add=True, db_index=True)
+    # Acréscimo aprovado: HMAC-SHA256 com REMED_IDENTIFICADOR_HMAC_KEY (sem PII bruto).
+    identificador_hash = models.CharField(max_length=64, db_index=True)
+    usuario = models.ForeignKey(
+        Usuario,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="registros_acesso",
+    )
+    ip_origem = models.GenericIPAddressField(db_index=True)
+    etapa = models.CharField(
+        max_length=25,
+        choices=EtapaAcesso.choices,
+        default=EtapaAcesso.SENHA,
+    )
+    resultado = models.CharField(
+        max_length=20,
+        choices=ResultadoAcesso.choices,
+        db_index=True,
+    )
+    motivo_interno = models.CharField(max_length=60, blank=True)
+
+    class Meta:
+        verbose_name = "Registro de acesso"
+        verbose_name_plural = "Registros de acesso"
+        ordering = ["-criado_em"]
+        indexes = [
+            models.Index(fields=["usuario", "criado_em"], name="idx_acesso_usuario_dt"),
+            models.Index(fields=["ip_origem", "criado_em"], name="idx_acesso_ip_dt"),
+            models.Index(fields=["identificador_hash", "criado_em"], name="idx_acesso_idhash_dt"),
+        ]
+
+    def __str__(self) -> str:
+        return f"Acesso #{self.pk} ({self.etapa} - {self.resultado})"
+
+
+class DispositivoTotp(models.Model):
+    """Dispositivo autenticador TOTP (RFC 6238) para contas administrativas (ADR 0009)."""
+
+    usuario = models.OneToOneField(
+        Usuario,
+        on_delete=models.CASCADE,
+        related_name="dispositivo_totp",
+    )
+    segredo = models.CharField(max_length=64)
+    confirmado_em = models.DateTimeField(null=True, blank=True)
+    ultimo_passo_usado = models.BigIntegerField(null=True, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Dispositivo TOTP"
+        verbose_name_plural = "Dispositivos TOTP"
+
+    def __str__(self) -> str:
+        return f"Dispositivo TOTP Usuário #{self.usuario_id}"
+
+
+class CodigoRecuperacaoTotp(models.Model):
+    """Código de recuperação alfanumérico de uso único (salvo apenas como hash — ADR 0009)."""
+
+    usuario = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        related_name="codigos_recuperacao_totp",
+    )
+    codigo_hash = models.CharField(max_length=128)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    usado_em = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Código de recuperação TOTP"
+        verbose_name_plural = "Códigos de recuperação TOTP"
+        indexes = [
+            models.Index(fields=["usuario", "usado_em"], name="idx_cod_rec_usuario_usado"),
+        ]
+
+    def __str__(self) -> str:
+        return f"Código recuperação #{self.pk} (Usuário #{self.usuario_id})"
+
+
+class SessaoUsuario(models.Model):
+    """Índice auxiliar ligando o usuário à session_key em django_session para revogação rápida."""
+
+    usuario = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        related_name="sessoes_ativas",
+    )
+    session_key = models.CharField(max_length=40, unique=True)
+    criado_em = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = "Sessão de usuário"
+        verbose_name_plural = "Sessões de usuários"
+        indexes = [
+            models.Index(fields=["usuario", "criado_em"], name="idx_sessao_usuario_dt"),
+        ]
+
+    def __str__(self) -> str:
+        return f"Sessão Usuário #{self.usuario_id}"
+
+
+class AcaoGestaoUsuario(models.Model):
+    """Histórico estruturado append-only das ações administrativas do RF004 (Spec 04)."""
+
+    usuario_alvo = models.ForeignKey(
+        Usuario,
+        on_delete=models.PROTECT,
+        related_name="acoes_gestao_recebidas",
+    )
+    responsavel = models.ForeignKey(
+        Usuario,
+        on_delete=models.PROTECT,
+        related_name="acoes_gestao_executadas",
+    )
+    acao = models.CharField(
+        max_length=30,
+        choices=TipoAcaoGestaoUsuario.choices,
+        db_index=True,
+    )
+    status_anterior = models.CharField(
+        max_length=20,
+        choices=StatusUsuario.choices,
+        blank=True,
+    )
+    status_novo = models.CharField(
+        max_length=20,
+        choices=StatusUsuario.choices,
+        blank=True,
+    )
+    funcoes_anteriores = models.JSONField(null=True, blank=True)
+    funcoes_novas = models.JSONField(null=True, blank=True)
+    motivo = models.TextField()
+    criado_em = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = "Ação de gestão de usuário"
+        verbose_name_plural = "Ações de gestão de usuários"
+        ordering = ["-criado_em"]
+        indexes = [
+            models.Index(fields=["usuario_alvo", "criado_em"], name="idx_acao_gestao_alvo_dt"),
+            models.Index(fields=["responsavel", "criado_em"], name="idx_acao_gestao_resp_dt"),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(motivo__regex=r"[^[:space:]]"),
+                name="ck_acao_gestao_motivo_nao_vazio",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"Ação #{self.pk} ({self.acao} -> Usuário #{self.usuario_alvo_id})"

@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+
+{% block title %}Detalhe do usuário · ReMed{% endblock %}
+
+{% block navbar_links %}
+  <ul class="navbar-nav ms-auto align-items-lg-center gap-2">
+    <li class="nav-item">
+      <a class="nav-link" href="{% url 'notificacoes:lista' %}">
+        Notificações
+        {% if notificacoes_nao_lidas > 0 %}
+          <span class="badge rounded-pill remed-badge-unread ms-1">{{ notificacoes_nao_lidas }}</span>
+          <span class="visually-hidden">não lidas</span>
+        {% endif %}
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link active fw-medium" aria-current="page" href="{% url 'contas:admin_usuario_lista' %}">
+        Gestão de usuários
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" href="{% url 'contas:perfil_editar' %}">Meu perfil</a>
+    </li>
+    <li class="nav-item">
+      <form method="post" action="{% url 'contas:logout' %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-secondary btn-sm">Sair</button>
+      </form>
+    </li>
+  </ul>
+{% endblock %}
+
+{% block content %}
+  <div class="remed-admin-wrapper">
+    <div class="mb-3">
+      <a href="{% url 'contas:admin_usuario_lista' %}" class="link-primary small fw-medium">
+        &larr; Voltar para a lista de usuários
+      </a>
+    </div>
+
+    <section class="remed-card p-3 p-sm-4 p-md-5 shadow-sm mb-4" aria-labelledby="titulo-detalhe-usuario">
+      <header class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3 mb-4">
+        <div>
+          <h1 id="titulo-detalhe-usuario" class="h3 fw-bold remed-auth-title mb-1">
+            {{ resumo.nome_completo }}
+          </h1>
+          <p class="remed-hint mb-0">
+            ID #{{ resumo.id }} · Cadastrado em {{ resumo.criado_em|date:"d/m/Y H:i" }}
+          </p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+          <span class="badge remed-status-badge remed-status-{{ resumo.status }} px-3 py-2">
+            {{ resumo.status_display }}
+          </span>
+          {% if resumo.totp_ativo %}
+            <span class="badge remed-badge-unread px-3 py-2">2FA ativo</span>
+          {% endif %}
+        </div>
+      </header>
+
+      <dl class="row g-3 mb-0">
+        <div class="col-12 col-md-4">
+          <dt class="small text-secondary fw-medium">CPF (mascarado)</dt>
+          <dd class="mb-0 fw-semibold">{{ resumo.cpf_mascarado }}</dd>
+        </div>
+        <div class="col-12 col-md-4">
+          <dt class="small text-secondary fw-medium">E-mail</dt>
+          <dd class="mb-0">
+            {{ resumo.email }}
+            {% if not resumo.anonimizado %}
+              <span class="small text-secondary">
+                ({% if resumo.email_confirmado %}confirmado{% else %}pendente{% endif %})
+              </span>
+            {% endif %}
+          </dd>
+        </div>
+        <div class="col-12 col-md-4">
+          <dt class="small text-secondary fw-medium">Perfis de uso</dt>
+          <dd class="mb-0 d-flex flex-wrap gap-1 mt-1">
+            {% for perfil in resumo.perfis_cidadao %}
+              <span class="badge remed-badge-read">{{ perfil }}</span>
+            {% empty %}
+              <span class="small text-secondary">Nenhum perfil cidadão</span>
+            {% endfor %}
+          </dd>
+        </div>
+        <div class="col-12">
+          <dt class="small text-secondary fw-medium">Funções administrativas</dt>
+          <dd class="mb-0 d-flex flex-wrap gap-1 mt-1">
+            {% for rotulo in resumo.funcoes_admin_rotulos %}
+              <span class="badge remed-badge-unread">{{ rotulo }}</span>
+            {% empty %}
+              <span class="small text-secondary">Sem funções administrativas</span>
+            {% endfor %}
+          </dd>
+        </div>
+      </dl>
+
+      {% if resumo.anonimizado %}
+        <div class="alert alert-secondary mt-4 mb-0" role="status">
+          Esta conta foi encerrada e anonimizada (LGPD). O registro permanece apenas para
+          rastreabilidade histórica e não pode ser reativado ou editado.
+        </div>
+      {% endif %}
+    </section>
+
+    <div class="row g-4 mb-4">
+      {% if detalhe.pode_alterar_status %}
+        <div class="col-12 col-lg-6">
+          <section class="remed-card p-3 p-sm-4 shadow-sm h-100" aria-labelledby="titulo-alterar-status">
+            <h2 id="titulo-alterar-status" class="remed-section-title mb-2">
+              Alterar status da conta
+            </h2>
+            <p class="remed-hint mb-3">
+              Suspender, bloquear ou inativar encerra imediatamente as sessões ativas do usuário e
+              registra o motivo na auditoria.
+            </p>
+
+            {% if form_status.errors %}
+              <div class="remed-error-summary p-3 mb-3 small" role="alert" aria-live="polite">
+                <ul class="mb-0 ps-3">
+                  {% for msg in form_status.mensagens_resumo_erros %}
+                    <li>{{ msg }}</li>
+                  {% endfor %}
+                </ul>
+              </div>
+            {% endif %}
+
+            <form method="post" action="{% url 'contas:admin_usuario_status' usuario_id=resumo.id %}" novalidate>
+              {% csrf_token %}
+              <div class="mb-3">
+                <label for="{{ form_status.novo_status.id_for_label }}" class="form-label fw-medium">
+                  {{ form_status.novo_status.label }}
+                </label>
+                {{ form_status.novo_status }}
+                {% if form_status.novo_status.errors %}
+                  <div class="invalid-feedback d-block">
+                    {% for erro in form_status.novo_status.errors %}{{ erro }}{% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+              <div class="mb-3">
+                <label for="{{ form_status.motivo.id_for_label }}" class="form-label fw-medium">
+                  {{ form_status.motivo.label }} <span class="remed-required-mark" aria-hidden="true">*</span>
+                </label>
+                {{ form_status.motivo }}
+                {% if form_status.motivo.errors %}
+                  <div class="invalid-feedback d-block">
+                    {% for erro in form_status.motivo.errors %}{{ erro }}{% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+              <button type="submit" class="btn btn-primary">Salvar novo status</button>
+            </form>
+          </section>
+        </div>
+      {% endif %}
+
+      {% if detalhe.pode_gerir_funcoes %}
+        <div class="col-12 col-lg-6">
+          <section class="remed-card p-3 p-sm-4 shadow-sm h-100" aria-labelledby="titulo-gerir-funcoes">
+            <h2 id="titulo-gerir-funcoes" class="remed-section-title mb-2">
+              Funções administrativas
+            </h2>
+            <p class="remed-hint mb-3">
+              Ação protegida por reconfirmação 2FA (step-up). Por segregação de funções (ADR 0010),
+              uma mesma conta não pode acumular <strong>Gestão de usuários</strong> e
+              <strong>Verificação de receitas</strong>.
+            </p>
+
+            {% if form_funcoes.errors %}
+              <div class="remed-error-summary p-3 mb-3 small" role="alert" aria-live="polite">
+                <ul class="mb-0 ps-3">
+                  {% for msg in form_funcoes.mensagens_resumo_erros %}
+                    <li>{{ msg }}</li>
+                  {% endfor %}
+                </ul>
+              </div>
+            {% endif %}
+
+            <form method="post" action="{% url 'contas:admin_usuario_funcoes' usuario_id=resumo.id %}" novalidate>
+              {% csrf_token %}
+              <fieldset class="mb-3">
+                <legend class="form-label fw-medium mb-2">Selecione as funções</legend>
+                <div class="d-flex flex-column gap-2">
+                  {% for checkbox in form_funcoes.funcoes %}
+                    <div class="form-check remed-check-touch">
+                      {{ checkbox.tag }}
+                      <label class="form-check-label" for="{{ checkbox.id_for_label }}">
+                        {{ checkbox.choice_label }}
+                      </label>
+                    </div>
+                  {% endfor %}
+                </div>
+              </fieldset>
+              <div class="mb-3">
+                <label for="{{ form_funcoes.motivo.id_for_label }}" class="form-label fw-medium">
+                  {{ form_funcoes.motivo.label }} <span class="remed-required-mark" aria-hidden="true">*</span>
+                </label>
+                {{ form_funcoes.motivo }}
+                {% if form_funcoes.motivo.errors %}
+                  <div class="invalid-feedback d-block">
+                    {% for erro in form_funcoes.motivo.errors %}{{ erro }}{% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+              <div class="mb-3">
+                <label for="{{ form_funcoes.codigo_step_up.id_for_label }}" class="form-label fw-medium">
+                  {{ form_funcoes.codigo_step_up.label }} <span class="remed-required-mark" aria-hidden="true">*</span>
+                </label>
+                {{ form_funcoes.codigo_step_up }}
+                {% if form_funcoes.codigo_step_up.errors %}
+                  <div class="invalid-feedback d-block">
+                    {% for erro in form_funcoes.codigo_step_up.errors %}{{ erro }}{% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+              <button type="submit" class="btn btn-primary">Atualizar funções</button>
+            </form>
+          </section>
+        </div>
+      {% endif %}
+    </div>
+
+    {% if detalhe.pode_resetar_2fa %}
+      <section class="remed-card p-3 p-sm-4 shadow-sm mb-4" aria-labelledby="titulo-reset-2fa">
+        <h2 id="titulo-reset-2fa" class="remed-section-title mb-2">
+          Resetar autenticação em dois fatores (2FA)
+        </h2>
+        <p class="remed-hint mb-3">
+          Revoga o dispositivo TOTP, invalida os códigos de recuperação, encerra todas as sessões
+          do Administrador alvo e exige novo pareamento no próximo acesso.
+        </p>
+
+        {% if form_reset_2fa.errors %}
+          <div class="remed-error-summary p-3 mb-3 small" role="alert" aria-live="polite">
+            <ul class="mb-0 ps-3">
+              {% for msg in form_reset_2fa.mensagens_resumo_erros %}
+                <li>{{ msg }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'contas:admin_usuario_resetar_2fa' usuario_id=resumo.id %}" novalidate>
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-12 col-md-7">
+              <label for="{{ form_reset_2fa.motivo.id_for_label }}" class="form-label fw-medium">
+                {{ form_reset_2fa.motivo.label }} <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              {{ form_reset_2fa.motivo }}
+              {% if form_reset_2fa.motivo.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for erro in form_reset_2fa.motivo.errors %}{{ erro }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+            <div class="col-12 col-md-5">
+              <label for="{{ form_reset_2fa.codigo_step_up.id_for_label }}" class="form-label fw-medium">
+                {{ form_reset_2fa.codigo_step_up.label }} <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              {{ form_reset_2fa.codigo_step_up }}
+              {% if form_reset_2fa.codigo_step_up.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for erro in form_reset_2fa.codigo_step_up.errors %}{{ erro }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+          <button type="submit" class="btn btn-outline-danger mt-3">Confirmar reset de 2FA</button>
+        </form>
+      </section>
+    {% endif %}
+
+    <section class="remed-card p-3 p-sm-4 shadow-sm" aria-labelledby="titulo-historico-gestao">
+      <h2 id="titulo-historico-gestao" class="remed-section-title mb-3">
+        Histórico de ações de gestão
+      </h2>
+      {% if detalhe.historico_acoes %}
+        <ul class="list-unstyled d-flex flex-column gap-3 mb-0">
+          {% for acao in detalhe.historico_acoes %}
+            <li class="border rounded p-3 bg-white">
+              <div class="d-flex flex-column flex-sm-row justify-content-between gap-1 mb-1">
+                <span class="fw-semibold">{{ acao.get_acao_display }}</span>
+                <time class="small text-secondary" datetime="{{ acao.criado_em|date:'c' }}">
+                  {{ acao.criado_em|date:"d/m/Y H:i" }}
+                </time>
+              </div>
+              {% if acao.status_anterior or acao.status_novo %}
+                <p class="small mb-1">
+                  Transição de status: <strong>{{ acao.status_anterior }}</strong> &rarr;
+                  <strong>{{ acao.status_novo }}</strong>
+                </p>
+              {% endif %}
+              {% if acao.acao == "alterar_funcoes_admin" %}
+                <p class="small mb-1">
+                  Funções anteriores: {{ acao.funcoes_anteriores|join:", "|default:"nenhuma" }} ·
+                  Novas funções: {{ acao.funcoes_novas|join:", "|default:"nenhuma" }}
+                </p>
+              {% endif %}
+              <p class="small mb-1"><strong>Motivo:</strong> {{ acao.motivo }}</p>
+              <p class="remed-hint mb-0">
+                Responsável: {{ acao.responsavel.nome_completo|default:"Administrador" }} (#{{ acao.responsavel_id }})
+              </p>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="remed-hint mb-0">Nenhuma ação administrativa registrada para esta conta até o momento.</p>
+      {% endif %}
+    </section>
+  </div>
+{% endblock %}

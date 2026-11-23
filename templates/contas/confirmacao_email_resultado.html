@@ -17,7 +17,7 @@
           {% endif %}
         </p>
         <div class="d-grid gap-2">
-          <a href="/contas/entrar/" class="btn btn-primary fw-semibold">Ir para entrar</a>
+          <a href="{% url 'contas:login' %}" class="btn btn-primary fw-semibold">Ir para entrar</a>
           <a href="{% url 'contas:cadastro' %}" class="btn btn-outline-secondary">
             Voltar ao cadastro
           </a>

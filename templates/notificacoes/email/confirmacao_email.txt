@@ -1,0 +1,8 @@
+Olá,
+
+Para ativar ou confirmar seu e-mail no ReMed, acesse o link abaixo (válido por tempo limitado e de uso único):
+
+{{ link_confirmacao }}
+
+Se você não solicitou esta ação, ignore esta mensagem.
+Equipe ReMed

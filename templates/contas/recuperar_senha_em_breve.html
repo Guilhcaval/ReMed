@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Recuperação de senha · ReMed{% endblock %}
+
+{% block content %}
+  <div class="remed-auth-wrapper-sm">
+    <section class="remed-card p-4 p-md-5 shadow-sm text-center" aria-labelledby="titulo-rec-senha">
+      <h1 id="titulo-rec-senha" class="h4 fw-bold remed-auth-title mb-3">
+        Recurso disponível em breve
+      </h1>
+      <p class="mb-3">
+        A recuperação automática de senha por e-mail será liberada na próxima fase do ReMed (v1.1).
+      </p>
+      <p class="remed-hint mb-4">
+        Enquanto isso, se precisar de apoio com o acesso à sua conta, entre em contato com a
+        equipe responsável pela operação da plataforma.
+      </p>
+      <a href="{% url 'contas:login' %}" class="btn btn-primary w-100 fw-semibold">
+        Voltar para entrar
+      </a>
+    </section>
+  </div>
+{% endblock %}

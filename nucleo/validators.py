@@ -73,6 +73,16 @@ def formatar_cpf(cpf_digitos: str) -> str:
     return f"{digitos[:3]}.{digitos[3:6]}.{digitos[6:9]}-{digitos[9:]}"
 
 
+def mascarar_cpf(cpf_digitos: str | None) -> str:
+    """Retorna CPF parcialmente oculto no formato 123.***.***-01 (RF004 / RN-04-07)."""
+    if not cpf_digitos:
+        return "—"
+    digitos = somente_digitos(cpf_digitos)
+    if len(digitos) != 11:
+        return "***.***.***-**"
+    return f"{digitos[:3]}.***.***-{digitos[9:]}"
+
+
 def validar_cep(valor: str) -> str:
     digitos = somente_digitos(valor)
     if len(digitos) != 8:

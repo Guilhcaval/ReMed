@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}Verificação em dois fatores (2FA) · ReMed{% endblock %}
+
+{% block navbar_links %}
+  <ul class="navbar-nav ms-auto align-items-lg-center gap-2">
+    <li class="nav-item">
+      <form method="post" action="{% url 'contas:logout' %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-secondary btn-sm">Sair</button>
+      </form>
+    </li>
+  </ul>
+{% endblock %}
+
+{% block content %}
+  <div class="remed-auth-wrapper-sm">
+    <section class="remed-card p-4 p-md-5 shadow-sm" aria-labelledby="titulo-totp-verificar">
+      <h1 id="titulo-totp-verificar" class="h4 fw-bold remed-auth-title mb-2">
+        Verificação em dois fatores (2FA)
+      </h1>
+
+      {% if modo_recuperacao %}
+        <p class="remed-hint mb-4">
+          Informe um dos seus códigos de recuperação de uso único para concluir o acesso.
+        </p>
+
+        {% if form_recuperacao.errors %}
+          <div class="remed-error-summary p-3 mb-3" role="alert" aria-live="polite">
+            <ul class="mb-0 ps-3">
+              {% for msg in form_recuperacao.mensagens_resumo_erros %}
+                <li>{{ msg }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'contas:totp_verificar' %}" novalidate>
+          {% csrf_token %}
+          <input type="hidden" name="modo" value="recuperacao">
+          {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+
+          <div class="mb-3">
+            <label for="{{ form_recuperacao.codigo_recuperacao.id_for_label }}" class="form-label fw-medium">
+              Código de recuperação
+            </label>
+            <input
+              type="text"
+              name="{{ form_recuperacao.codigo_recuperacao.html_name }}"
+              id="{{ form_recuperacao.codigo_recuperacao.id_for_label }}"
+              class="form-control text-uppercase{% if form_recuperacao.codigo_recuperacao.errors %} is-invalid{% endif %}"
+              placeholder="XXXX-XXXX"
+              autocomplete="off"
+              maxlength="20"
+              required
+              {% if form_recuperacao.codigo_recuperacao.errors %}aria-invalid="true" aria-describedby="erro-rec-2fa"{% endif %}
+            >
+            {% if form_recuperacao.codigo_recuperacao.errors %}
+              <div id="erro-rec-2fa" class="invalid-feedback d-block">
+                {% for erro in form_recuperacao.codigo_recuperacao.errors %}{{ erro }}{% endfor %}
+              </div>
+            {% endif %}
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100 fw-semibold">
+            Validar código de recuperação
+          </button>
+        </form>
+
+        <div class="text-center mt-3">
+          <a href="{% url 'contas:totp_verificar' %}" class="small">
+            Voltar para o código de 6 dígitos do aplicativo
+          </a>
+        </div>
+      {% else %}
+        <p class="remed-hint mb-4">
+          Informe o código de 6 dígitos exibido no seu aplicativo autenticador.
+        </p>
+
+        {% if form_totp.errors %}
+          <div class="remed-error-summary p-3 mb-3" role="alert" aria-live="polite">
+            <ul class="mb-0 ps-3">
+              {% for msg in form_totp.mensagens_resumo_erros %}
+                <li>{{ msg }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'contas:totp_verificar' %}" novalidate>
+          {% csrf_token %}
+          {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+
+          <div class="mb-3">
+            <label for="{{ form_totp.codigo.id_for_label }}" class="form-label fw-medium">
+              Código de 6 dígitos
+            </label>
+            <input
+              type="text"
+              name="{{ form_totp.codigo.html_name }}"
+              id="{{ form_totp.codigo.id_for_label }}"
+              class="form-control{% if form_totp.codigo.errors %} is-invalid{% endif %}"
+              placeholder="000000"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              maxlength="12"
+              required
+              {% if form_totp.codigo.errors %}aria-invalid="true" aria-describedby="erro-totp-verif"{% endif %}
+            >
+            {% if form_totp.codigo.errors %}
+              <div id="erro-totp-verif" class="invalid-feedback d-block">
+                {% for erro in form_totp.codigo.errors %}{{ erro }}{% endfor %}
+              </div>
+            {% endif %}
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100 fw-semibold">
+            Verificar código
+          </button>
+        </form>
+
+        <div class="text-center mt-3">
+          <a href="{% url 'contas:totp_verificar' %}?modo=recuperacao" class="small">
+            Usar um código de recuperação
+          </a>
+        </div>
+      {% endif %}
+
+      <hr class="remed-section-divider my-4">
+
+      <form method="post" action="{% url 'contas:logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-secondary w-100">
+          Cancelar e sair
+        </button>
+      </form>
+    </section>
+  </div>
+{% endblock %}

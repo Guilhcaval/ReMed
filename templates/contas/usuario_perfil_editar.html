@@ -6,14 +6,43 @@
 {% block navbar_links %}
   <ul class="navbar-nav ms-auto align-items-lg-center gap-2">
     <li class="nav-item">
+      <a class="nav-link" href="{% url 'notificacoes:lista' %}">
+        Notificações
+        {% if notificacoes_nao_lidas > 0 %}
+          <span class="badge rounded-pill remed-badge-unread ms-1">{{ notificacoes_nao_lidas }}</span>
+          <span class="visually-hidden">não lidas</span>
+        {% endif %}
+      </a>
+    </li>
+    {% if pode_gestao_usuarios %}
+      <li class="nav-item">
+        <a class="nav-link" href="{% url 'contas:admin_usuario_lista' %}">
+          Gestão de usuários
+        </a>
+      </li>
+    {% endif %}
+    <li class="nav-item">
       <a class="nav-link active fw-medium" aria-current="page" href="{% url 'contas:perfil_editar' %}">
         Meu perfil
       </a>
     </li>
+    {% if exige_2fa and totp_ativo %}
+      <li class="nav-item">
+        <a class="nav-link" href="{% url 'contas:totp_regenerar_codigos' %}">
+          Códigos 2FA
+        </a>
+      </li>
+    {% endif %}
     <li class="nav-item">
       <a class="nav-link text-danger" href="{% url 'contas:encerrar_conta' %}">
         Encerrar conta
       </a>
+    </li>
+    <li class="nav-item">
+      <form method="post" action="{% url 'contas:logout' %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-secondary btn-sm">Sair</button>
+      </form>
     </li>
   </ul>
 {% endblock %}

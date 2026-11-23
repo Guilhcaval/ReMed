@@ -5,7 +5,9 @@ de variáveis de ambiente (carregadas de `.env` em desenvolvimento via
 python-dotenv com override=False, conforme ADR 0020).
 """
 
+import hashlib
 import os
+import sys
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
@@ -75,7 +77,9 @@ INSTALLED_APPS = [
 ]
 
 AUTH_USER_MODEL = "contas.Usuario"
+AUTHENTICATION_BACKENDS = ["contas.backends.EmailOuCpfBackend"]
 LOGIN_URL = "/contas/entrar/"
+LOGIN_REDIRECT_URL = "/contas/meu-perfil/"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -99,6 +103,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "notificacoes.context_processors.contador_notificacoes",
             ],
         },
     },
@@ -200,7 +205,45 @@ REMED_TERMOS_VERSAO_ATUAL = _obter_env("REMED_TERMOS_VERSAO_ATUAL", "1.0-rascunh
 REMED_LOGIN_MAX_TENTATIVAS = _obter_int("REMED_LOGIN_MAX_TENTATIVAS", 5)
 REMED_LOGIN_JANELA_MINUTOS = _obter_int("REMED_LOGIN_JANELA_MINUTOS", 15)
 REMED_LOGIN_BLOQUEIO_MINUTOS = _obter_int("REMED_LOGIN_BLOQUEIO_MINUTOS", 15)
+# Acréscimo da especificação (Spec 02 / ADR 0009): limite secundário por IP e limite de falhas 2FA
+REMED_LOGIN_LIMITE_IP_TENTATIVAS = _obter_int("REMED_LOGIN_LIMITE_IP_TENTATIVAS", 20)
+REMED_2FA_MAX_TENTATIVAS = _obter_int("REMED_2FA_MAX_TENTATIVAS", 5)
+REMED_TOTP_ISSUER = _obter_env("REMED_TOTP_ISSUER", "ReMed")
+REMED_TOTP_CODIGOS_RECUPERACAO_QTD = _obter_int("REMED_TOTP_CODIGOS_RECUPERACAO_QTD", 8)
+
+
+def resolver_identificador_hmac_key(
+    valor_env: str,
+    secret_key: str,
+    *,
+    debug: bool,
+    em_teste: bool,
+) -> str:
+    """Resolve a chave dedicada de HMAC para RegistroAcesso.identificador_hash.
+
+    Em produção (DEBUG=False fora de testes), recusa iniciar sem REMED_IDENTIFICADOR_HMAC_KEY.
+    """
+    chave = (valor_env or "").strip()
+    if chave:
+        return chave
+    if debug or em_teste:
+        return hashlib.sha256(f"remed-dev-identificador-hmac:{secret_key}".encode()).hexdigest()
+    raise ImproperlyConfigured(
+        "Variável de ambiente obrigatória ausente em produção: REMED_IDENTIFICADOR_HMAC_KEY. "
+        "Defina uma chave dedicada independente de DJANGO_SECRET_KEY (consulte .env.example)."
+    )
+
+
+REMED_IDENTIFICADOR_HMAC_KEY = resolver_identificador_hmac_key(
+    _obter_env("REMED_IDENTIFICADOR_HMAC_KEY", ""),
+    SECRET_KEY,
+    debug=DEBUG,
+    em_teste="test" in sys.argv,
+)
 REMED_NOTIFICACAO_EMAIL_LIMITE_HORA = _obter_int("REMED_NOTIFICACAO_EMAIL_LIMITE_HORA", 20)
+# Acréscimo da especificação (Spec 03 / RN-03-05): limiar de falhas definitivas no lote SMTP
+# para disparo de alerta operacional (gravado apenas na plataforma para evitar loop de SMTP).
+REMED_NOTIFICACAO_ALERTA_FALHAS_LOTE = _obter_int("REMED_NOTIFICACAO_ALERTA_FALHAS_LOTE", 3)
 REMED_PONTO_DOC_AVISO_VENCIMENTO_DIAS = _obter_int("REMED_PONTO_DOC_AVISO_VENCIMENTO_DIAS", 30)
 REMED_PONTO_REVISAO_PERIODICA_DIAS = _obter_int("REMED_PONTO_REVISAO_PERIODICA_DIAS", 180)
 REMED_REFRIGERADO_JANELA_MAX_MINUTOS = _obter_int("REMED_REFRIGERADO_JANELA_MAX_MINUTOS", 120)

@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}Notificações · ReMed{% endblock %}
+
+{% block navbar_links %}
+  <ul class="navbar-nav ms-auto align-items-lg-center gap-2">
+    <li class="nav-item">
+      <a class="nav-link active fw-medium" aria-current="page" href="{% url 'notificacoes:lista' %}">
+        Notificações
+        {% if total_nao_lidas > 0 %}
+          <span class="badge rounded-pill remed-badge-unread ms-1">{{ total_nao_lidas }}</span>
+          <span class="visually-hidden">não lidas</span>
+        {% endif %}
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" href="{% url 'contas:perfil_editar' %}">Meu perfil</a>
+    </li>
+    <li class="nav-item">
+      <form method="post" action="{% url 'contas:logout' %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-secondary btn-sm">Sair</button>
+      </form>
+    </li>
+  </ul>
+{% endblock %}
+
+{% block content %}
+  <div class="remed-auth-wrapper">
+    <section class="remed-card p-3 p-sm-4 p-md-5 shadow-sm" aria-labelledby="titulo-notificacoes">
+      <header class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+          <h1 id="titulo-notificacoes" class="h3 fw-bold remed-auth-title mb-1">Notificações</h1>
+          <p class="remed-hint mb-0">
+            {% if total_nao_lidas > 0 %}
+              Você possui <strong>{{ total_nao_lidas }}</strong> notificação(ões) não lida(s).
+            {% else %}
+              Todas as suas notificações estão em dia.
+            {% endif %}
+          </p>
+        </div>
+        {% if total_nao_lidas > 0 %}
+          <form method="post" action="{% url 'notificacoes:marcar_todas_lidas' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-primary btn-sm">
+              Marcar todas como lidas
+            </button>
+          </form>
+        {% endif %}
+      </header>
+
+      <form method="get" action="{% url 'notificacoes:lista' %}" class="border rounded p-3 mb-4 bg-light" novalidate>
+        {% if form.non_field_errors %}
+          <div class="remed-error-summary p-2 px-3 mb-3 small" role="alert" aria-live="polite">
+            {% for erro in form.non_field_errors %}{{ erro }}{% endfor %}
+          </div>
+        {% endif %}
+        <div class="row g-3 align-items-end">
+          <div class="col-12 col-md-4">
+            <label for="{{ form.tipo.id_for_label }}" class="form-label fw-medium">Tipo</label>
+            {{ form.tipo }}
+          </div>
+          <div class="col-12 col-md-2">
+            <label for="{{ form.status.id_for_label }}" class="form-label fw-medium">Status</label>
+            {{ form.status }}
+          </div>
+          <div class="col-12 col-sm-6 col-md-3">
+            <label for="{{ form.data_inicio.id_for_label }}" class="form-label fw-medium">De</label>
+            {{ form.data_inicio }}
+          </div>
+          <div class="col-12 col-sm-6 col-md-3">
+            <label for="{{ form.data_fim.id_for_label }}" class="form-label fw-medium">Até</label>
+            {{ form.data_fim }}
+          </div>
+        </div>
+        <div class="d-flex flex-wrap gap-2 mt-3">
+          <button type="submit" class="btn btn-primary btn-sm px-3">Filtrar</button>
+          {% if tem_filtros %}
+            <a href="{% url 'notificacoes:lista' %}" class="btn btn-outline-secondary btn-sm">
+              Limpar filtros
+            </a>
+          {% endif %}
+        </div>
+      </form>
+
+      {% if pagina.object_list %}
+        <ul class="list-unstyled d-flex flex-column gap-3 mb-4">
+          {% for item in pagina.object_list %}
+            <li class="border rounded p-3 {% if item.status == 'enviada' %}remed-notif-unread{% else %}bg-white{% endif %}">
+              <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-start gap-2 mb-2">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                  {% if item.status == "enviada" %}
+                    <span class="badge remed-badge-unread">Não lida</span>
+                  {% else %}
+                    <span class="badge remed-badge-read">Lida</span>
+                  {% endif %}
+                  {% if item.obrigatoria %}
+                    <span class="badge remed-badge-security">Segurança da conta</span>
+                  {% endif %}
+                  <span class="small text-secondary">{{ item.get_tipo_display }}</span>
+                </div>
+                <time class="small text-secondary" datetime="{{ item.criada_em|date:'c' }}">
+                  {{ item.criada_em|date:"d/m/Y H:i" }}
+                </time>
+              </div>
+
+              <h2 class="h6 fw-semibold mb-1">{{ item.titulo }}</h2>
+              <p class="mb-3 small">{{ item.mensagem }}</p>
+
+              <div class="d-flex flex-wrap align-items-center gap-2">
+                {% if item.status == "enviada" %}
+                  <form method="post" action="{% url 'notificacoes:marcar_lida' notificacao_id=item.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button type="submit" class="btn btn-outline-primary btn-sm">
+                      Marcar como lida
+                    </button>
+                  </form>
+                {% elif item.lida_em %}
+                  <span class="remed-hint">Lida em {{ item.lida_em|date:"d/m/Y H:i" }}</span>
+                {% endif %}
+
+                {% if item.url_destino %}
+                  <a href="{{ item.url_destino }}" class="btn btn-link btn-sm ps-0">
+                    Abrir detalhes
+                  </a>
+                {% endif %}
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+
+        {% if pagina.has_other_pages %}
+          <nav aria-label="Paginação de notificações">
+            <ul class="pagination justify-content-center mb-0">
+              {% if pagina.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ pagina.previous_page_number }}{% if request.GET.tipo %}&tipo={{ request.GET.tipo|urlencode }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status|urlencode }}{% endif %}{% if request.GET.data_inicio %}&data_inicio={{ request.GET.data_inicio|urlencode }}{% endif %}{% if request.GET.data_fim %}&data_fim={{ request.GET.data_fim|urlencode }}{% endif %}">
+                    Anterior
+                  </a>
+                </li>
+              {% endif %}
+              <li class="page-item disabled">
+                <span class="page-link">Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+              </li>
+              {% if pagina.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ pagina.next_page_number }}{% if request.GET.tipo %}&tipo={{ request.GET.tipo|urlencode }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status|urlencode }}{% endif %}{% if request.GET.data_inicio %}&data_inicio={{ request.GET.data_inicio|urlencode }}{% endif %}{% if request.GET.data_fim %}&data_fim={{ request.GET.data_fim|urlencode }}{% endif %}">
+                    Próxima
+                  </a>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+        {% endif %}
+      {% else %}
+        <div class="text-center py-4 border rounded bg-light">
+          <p class="mb-2 fw-medium">
+            {% if tem_filtros %}
+              Nenhuma notificação encontrada para os filtros informados
+            {% else %}
+              Você ainda não possui notificações
+            {% endif %}
+          </p>
+          {% if tem_filtros %}
+            <a href="{% url 'notificacoes:lista' %}" class="btn btn-outline-primary btn-sm">
+              Ver todas as notificações
+            </a>
+          {% endif %}
+        </div>
+      {% endif %}
+    </section>
+  </div>
+{% endblock %}

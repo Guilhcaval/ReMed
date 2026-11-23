@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Entrar no ReMed{% endblock %}
+
+{% block navbar_links %}
+  <ul class="navbar-nav ms-auto align-items-lg-center gap-2">
+    <li class="nav-item">
+      <a class="nav-link active fw-medium" aria-current="page" href="{% url 'contas:login' %}">
+        Entrar
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" href="{% url 'contas:cadastro' %}">
+        Criar conta
+      </a>
+    </li>
+  </ul>
+{% endblock %}
+
+{% block content %}
+  <div class="remed-auth-wrapper-sm">
+    <section class="remed-card p-3 p-sm-4 p-md-5 shadow-sm" aria-labelledby="titulo-login">
+      <header class="text-center mb-4">
+        <div class="d-flex justify-content-center mb-2">
+          <img
+            src="{% static 'img/logo.png' %}"
+            alt="ReMed"
+            width="68"
+            height="72"
+            class="remed-auth-logo"
+            decoding="async"
+          >
+        </div>
+        <h1 id="titulo-login" class="h3 fw-bold remed-auth-title mb-1">Entrar no ReMed</h1>
+        <p class="remed-hint mb-0">Acesse sua conta para continuar.</p>
+      </header>
+
+      {% if form.errors %}
+        <div class="remed-error-summary p-3 mb-4" role="alert" aria-live="polite">
+          <ul class="mb-0 ps-3">
+            {% for msg in form.mensagens_resumo_erros %}
+              <li>{{ msg }}</li>
+            {% endfor %}
+          </ul>
+          {% if mostrar_reenvio_confirmacao %}
+            <p class="mt-2 mb-0 small">
+              <a href="{% url 'contas:reenviar_confirmacao' %}" class="fw-semibold">
+                Solicitar novo link de confirmação de e-mail
+              </a>
+            </p>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      <form method="post" action="{% url 'contas:login' %}" novalidate>
+        {% csrf_token %}
+        {% if next_url %}
+          <input type="hidden" name="next" value="{{ next_url }}">
+        {% endif %}
+
+        <div class="mb-3">
+          <label for="{{ form.identificador.id_for_label }}" class="form-label fw-medium">
+            E-mail ou CPF
+          </label>
+          <input
+            type="text"
+            name="{{ form.identificador.html_name }}"
+            id="{{ form.identificador.id_for_label }}"
+            value="{{ form.identificador.value|default_if_none:'' }}"
+            class="form-control{% if form.identificador.errors %} is-invalid{% endif %}"
+            placeholder="Digite seu e-mail ou CPF"
+            autocomplete="username"
+            maxlength="254"
+            required
+            {% if form.identificador.errors %}aria-invalid="true" aria-describedby="erro-identificador"{% endif %}
+          >
+          {% if form.identificador.errors %}
+            <div id="erro-identificador" class="invalid-feedback d-block">
+              {% for erro in form.identificador.errors %}{{ erro }}{% endfor %}
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="mb-2">
+          <label for="{{ form.senha.id_for_label }}" class="form-label fw-medium">
+            Senha
+          </label>
+          <div class="input-group remed-password-group{% if form.senha.errors %} is-invalid{% endif %}">
+            <input
+              type="password"
+              name="{{ form.senha.html_name }}"
+              id="{{ form.senha.id_for_label }}"
+              class="form-control"
+              placeholder="Digite sua senha"
+              autocomplete="current-password"
+              required
+              {% if form.senha.errors %}aria-invalid="true" aria-describedby="erro-login-senha"{% endif %}
+            >
+            <button
+              type="button"
+              class="btn remed-password-toggle"
+              data-toggle-senha="{{ form.senha.id_for_label }}"
+              aria-pressed="false"
+              aria-label="Mostrar senha"
+            >
+              Mostrar
+            </button>
+          </div>
+          {% if form.senha.errors %}
+            <div id="erro-login-senha" class="invalid-feedback d-block">
+              {% for erro in form.senha.errors %}{{ erro }}{% endfor %}
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="text-end mb-4">
+          <a href="{% url 'contas:recuperar_senha_em_breve' %}" class="remed-cep-help-link">
+            Esqueci minha senha
+          </a>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100 fw-semibold">
+          Entrar
+        </button>
+
+        <p class="text-center mt-3 mb-0 small text-secondary">
+          Ainda não tem uma conta?
+          <a href="{% url 'contas:cadastro' %}" class="fw-semibold text-decoration-none">
+            Criar conta
+          </a>
+        </p>
+      </form>
+
+      <hr class="remed-section-divider my-4">
+
+      <div class="text-center mb-3">
+        <span
+          class="d-inline-flex align-items-center gap-2 fw-semibold remed-visitor-disabled"
+          aria-disabled="true"
+          title="Busca resumida para visitantes disponível em breve (Spec 14)"
+        >
+          <span>Continuar como visitante</span>
+          <span class="badge text-bg-secondary fw-normal">Em breve</span>
+        </span>
+      </div>
+
+      <div class="remed-banner-info p-3" role="note">
+        <p class="mb-1 small fw-medium">
+          Consulte o resumo dos medicamentos disponíveis.
+        </p>
+        <p class="mb-0 remed-hint">
+          Para doar ou solicitar, entre na sua conta.
+        </p>
+      </div>
+    </section>
+
+    <p class="text-center remed-hint mt-4 mb-0">
+      ReMed · Conectando cuidado, compartilhando saúde.
+    </p>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'js/cadastro.js' %}" defer></script>
+{% endblock %}

@@ -162,9 +162,26 @@
     });
   }
 
+  function inicializarCopiaChave() {
+    var botoes = document.querySelectorAll("[data-copiar-alvo]");
+    var status = document.getElementById("totp-copia-status");
+    botoes.forEach(function (botao) {
+      var alvo = document.getElementById(botao.getAttribute("data-copiar-alvo"));
+      if (!alvo) return;
+      botao.addEventListener("click", function () {
+        var texto = (alvo.textContent || "").trim();
+        if (!texto || !navigator.clipboard) return;
+        navigator.clipboard.writeText(texto).then(function () {
+          if (status) status.textContent = "Chave manual copiada para a área de transferência.";
+        });
+      });
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     inicializarMascaras();
     inicializarToggleSenha();
     inicializarConsultaCep();
+    inicializarCopiaChave();
   });
 })();

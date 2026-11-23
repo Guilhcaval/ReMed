@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Configurar autenticação em dois fatores (2FA) · ReMed{% endblock %}
+
+{% block navbar_links %}
+  <ul class="navbar-nav ms-auto align-items-lg-center gap-2">
+    <li class="nav-item">
+      <form method="post" action="{% url 'contas:logout' %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-secondary btn-sm">Sair</button>
+      </form>
+    </li>
+  </ul>
+{% endblock %}
+
+{% block content %}
+  <div class="remed-auth-wrapper-sm">
+    <section class="remed-card p-4 p-md-5 shadow-sm" aria-labelledby="titulo-totp-config">
+      {% if codigos_recuperacao %}
+        <h1 id="titulo-totp-config" class="h4 fw-bold remed-auth-title mb-2">
+          Autenticação em dois fatores ativada
+        </h1>
+        <div class="alert alert-warning small" role="alert">
+          <strong>Guarde seus 8 códigos de recuperação agora.</strong> Eles são exibidos uma única
+          vez e permitem acessar sua conta caso você perca acesso ao aplicativo autenticador. Cada
+          código só pode ser usado uma vez.
+        </div>
+
+        <ul class="remed-recovery-grid list-unstyled mb-4" aria-label="Códigos de recuperação">
+          {% for codigo in codigos_recuperacao %}
+            <li class="remed-recovery-code"><code>{{ codigo }}</code></li>
+          {% endfor %}
+        </ul>
+
+        <a href="{{ destino_continuar }}" class="btn btn-primary w-100 fw-semibold">
+          Já guardei meus códigos · Continuar
+        </a>
+      {% else %}
+        <h1 id="titulo-totp-config" class="h4 fw-bold remed-auth-title mb-2">
+          Configurar autenticação em dois fatores (2FA)
+        </h1>
+        <p class="remed-hint mb-3">
+          Contas com funções administrativas exigem um aplicativo autenticador (Google Authenticator,
+          FreeOTP, Aegis ou compatível com TOTP).
+        </p>
+
+        <ol class="small mb-4 ps-3">
+          <li class="mb-1">Abra o aplicativo autenticador e escaneie o QR code abaixo.</li>
+          <li class="mb-1">Se preferir, informe a chave manual no aplicativo.</li>
+          <li>Digite o código de 6 dígitos exibido pelo aplicativo para concluir a ativação.</li>
+        </ol>
+
+        <div class="remed-qr-box text-center p-3 mb-3">
+          <img
+            src="{{ pareamento.qr_svg_data_uri }}"
+            alt="QR code para pareamento do aplicativo autenticador"
+            width="210"
+            height="210"
+            class="img-fluid"
+          >
+        </div>
+
+        <div class="mb-4">
+          <p class="small fw-medium mb-1">Chave manual (exibida apenas durante o pareamento):</p>
+          <div class="d-flex align-items-center justify-content-between gap-2 p-2 rounded border bg-light">
+            <code id="totp-segredo-manual" class="text-break">{{ pareamento.segredo_manual }}</code>
+            <button
+              type="button"
+              class="btn btn-outline-secondary btn-sm flex-shrink-0"
+              data-copiar-alvo="totp-segredo-manual"
+            >
+              Copiar
+            </button>
+          </div>
+          <div id="totp-copia-status" class="remed-hint mt-1" aria-live="polite"></div>
+        </div>
+
+        {% if form.errors %}
+          <div class="remed-error-summary p-3 mb-3" role="alert" aria-live="polite">
+            <ul class="mb-0 ps-3">
+              {% for msg in form.mensagens_resumo_erros %}
+                <li>{{ msg }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'contas:totp_configurar' %}" novalidate>
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="{{ form.codigo.id_for_label }}" class="form-label fw-medium">
+              Código de 6 dígitos do aplicativo
+            </label>
+            <input
+              type="text"
+              name="{{ form.codigo.html_name }}"
+              id="{{ form.codigo.id_for_label }}"
+              class="form-control{% if form.codigo.errors %} is-invalid{% endif %}"
+              placeholder="000000"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              maxlength="12"
+              required
+              {% if form.codigo.errors %}aria-invalid="true" aria-describedby="erro-totp-config"{% endif %}
+            >
+            {% if form.codigo.errors %}
+              <div id="erro-totp-config" class="invalid-feedback d-block">
+                {% for erro in form.codigo.errors %}{{ erro }}{% endfor %}
+              </div>
+            {% endif %}
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100 fw-semibold">
+            Confirmar e ativar 2FA
+          </button>
+        </form>
+      {% endif %}
+    </section>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'js/cadastro.js' %}" defer></script>
+{% endblock %}

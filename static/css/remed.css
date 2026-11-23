@@ -307,6 +307,91 @@ textarea:focus-visible {
   color: var(--remed-muted);
 }
 
+.remed-visitor-disabled {
+  color: var(--remed-primary);
+  opacity: 0.8;
+  cursor: not-allowed;
+}
+
+.remed-qr-box {
+  background-color: var(--remed-surface-card);
+  border: 1px solid var(--remed-border);
+  border-radius: 0.5rem;
+}
+
+.remed-recovery-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.remed-recovery-code {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--remed-border);
+  border-radius: 0.375rem;
+  background-color: var(--remed-surface);
+  text-align: center;
+  font-size: 0.95rem;
+}
+
+.remed-admin-wrapper {
+  max-width: 70rem;
+  margin-inline: auto;
+}
+
+.remed-badge-unread {
+  background-color: var(--remed-primary);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.remed-badge-read {
+  background-color: var(--remed-surface-muted);
+  color: #384855;
+  border: 1px solid var(--remed-border);
+  font-weight: 600;
+}
+
+.remed-badge-security {
+  background-color: var(--remed-danger);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.remed-notif-unread {
+  background-color: #f0f6fb;
+  border-left: 4px solid var(--remed-primary) !important;
+}
+
+.remed-status-badge {
+  border: 1px solid transparent;
+  font-weight: 600;
+}
+
+.remed-status-ativo {
+  background-color: #e6f4ea;
+  color: #14532d;
+  border-color: #b7dfc4;
+}
+
+.remed-status-inativo {
+  background-color: var(--remed-surface-muted);
+  color: #384855;
+  border-color: #cbd6df;
+}
+
+.remed-status-suspenso {
+  background-color: #fff4e5;
+  color: #7c3e00;
+  border-color: #f2cf9b;
+}
+
+.remed-status-bloqueado {
+  background-color: var(--remed-danger-soft);
+  color: #8f1d28;
+  border-color: #ebbfc4;
+}
+
 @media (max-width: 575.98px) {
   .remed-auth-logo {
     height: 3.75rem;
