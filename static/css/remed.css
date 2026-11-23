@@ -1,0 +1,77 @@
+/* Design tokens e identidade visual do ReMed sobre Bootstrap local (ADR 0005 / WCAG 2.1 AA) */
+
+:root {
+  --remed-primary: #146c43;
+  --remed-primary-hover: #0f5132;
+  --remed-primary-soft: #e9f5ee;
+  --remed-surface: #f7f9f8;
+  --remed-text: #1b2420;
+  --remed-muted: #4a5a52;
+  --remed-border: #d7e2dc;
+  --remed-focus: #0a58ca;
+
+  --bs-primary: var(--remed-primary);
+  --bs-primary-rgb: 20, 108, 67;
+  --bs-body-bg: var(--remed-surface);
+  --bs-body-color: var(--remed-text);
+  --bs-link-color: var(--remed-primary);
+  --bs-link-hover-color: var(--remed-primary-hover);
+}
+
+.remed-body {
+  background-color: var(--remed-surface);
+  color: var(--remed-text);
+}
+
+.remed-brand {
+  color: var(--remed-primary);
+  letter-spacing: -0.02em;
+}
+
+.remed-brand:hover,
+.remed-brand:focus-visible {
+  color: var(--remed-primary-hover);
+}
+
+.remed-skip-link {
+  position: absolute;
+  left: 1rem;
+  top: 0.5rem;
+  z-index: 1080;
+  padding: 0.5rem 0.75rem;
+  background-color: var(--remed-primary);
+  color: #ffffff;
+  border-radius: 0.375rem;
+  text-decoration: none;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--remed-focus);
+  outline-offset: 2px;
+}
+
+.btn-primary {
+  --bs-btn-bg: var(--remed-primary);
+  --bs-btn-border-color: var(--remed-primary);
+  --bs-btn-hover-bg: var(--remed-primary-hover);
+  --bs-btn-hover-border-color: var(--remed-primary-hover);
+  --bs-btn-active-bg: var(--remed-primary-hover);
+  --bs-btn-active-border-color: var(--remed-primary-hover);
+}
+
+.remed-card {
+  background-color: #ffffff;
+  border: 1px solid var(--remed-border);
+  border-radius: 0.75rem;
+}
+
+.remed-banner-info {
+  background-color: var(--remed-primary-soft);
+  border: 1px solid var(--remed-border);
+  color: var(--remed-text);
+  border-radius: 0.5rem;
+}

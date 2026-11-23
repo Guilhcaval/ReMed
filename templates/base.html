@@ -1,0 +1,58 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}ReMed — Doação responsável de medicamentos{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'vendor/bootstrap/css/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/remed.css' %}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body class="remed-body d-flex flex-column min-vh-100">
+  <a class="visually-hidden-focusable remed-skip-link" href="#conteudo-principal">
+    Pular para o conteúdo principal
+  </a>
+
+  <header class="remed-header border-bottom bg-white">
+    <nav class="navbar navbar-expand-lg" aria-label="Navegação principal">
+      <div class="container">
+        <a class="navbar-brand fw-semibold remed-brand" href="/">
+          ReMed
+        </a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#remedNavbar"
+          aria-controls="remedNavbar"
+          aria-expanded="false"
+          aria-label="Abrir menu de navegação"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="remedNavbar">
+          {% block navbar_links %}{% endblock %}
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <main id="conteudo-principal" class="flex-grow-1 py-4" tabindex="-1">
+    <div class="container">
+      {% include "partials/_mensagens.html" %}
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <footer class="remed-footer border-top bg-white py-3 mt-auto">
+    <div class="container small text-secondary d-flex flex-column flex-md-row justify-content-between gap-2">
+      <span>ReMed — Plataforma de doação responsável de medicamentos dentro da validade.</span>
+      <span>O ReMed não substitui avaliação médica ou farmacêutica.</span>
+    </div>
+  </footer>
+
+  <script src="{% static 'vendor/bootstrap/js/bootstrap.bundle.min.js' %}" defer></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

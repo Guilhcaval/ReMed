@@ -1,0 +1,71 @@
+# ReMed — Instruções do Projeto para Agentes
+
+## 1. Sobre o projeto e mapa da documentação
+
+O **ReMed** é uma aplicação web Django para doação e redistribuição responsável de medicamentos dentro da validade, conectando doadores, solicitantes/cuidadores, pontos de coleta e administradores sob requisitos de segurança sanitária e LGPD.
+
+Antes de propor ou alterar qualquer funcionalidade, consulte a documentação oficial (não duplique regras no código nem invente requisitos):
+
+- **PRD e catálogo de requisitos:** `docs/prd/01-remed.md` e `docs/prd/02-catalogo-requisitos.md`
+- **Decisões de arquitetura (ADRs do MVP e da v1.1 aceitas (0001–0020); as da v2.0 ainda não foram escritas):** `docs/adr/README.md`
+- **Mapa consolidado, apps, convenções e dependências:** `docs/arquitetura.md`
+- **Especificações por requisito (Specs 01–23, todas aprovadas):** `docs/specs/` (MVP: `01` a `19`; v1.1: `20` a `22`; v2.0: `23`)
+
+## 2. Hierarquia de decisão
+
+Em caso de conflito, prevalece sempre a ordem:
+
+**ADR (`docs/adr/`) > Spec (`docs/specs/`) > Código existente**
+
+- Em caso de dúvida, conflito entre documentos ou comportamento não especificado, **pare e pergunte ao usuário** antes de implementar.
+- Qualquer item que não conste no requisito da fonte deve ser marcado como **"acréscimo da especificação"** e perguntado antes de entrar no código.
+
+## 3. Stack e arquitetura (resumo — detalhes em `docs/arquitetura.md`)
+
+- **Runtime e banco:** Python `3.14`, Django `6.1.3`, PostgreSQL `18` (`psycopg` 3), variáveis de ambiente com `python-dotenv` (`.env.example`).
+- **Padrão MVT com camada de service (ADR 0001):**
+  - **Views:** apenas CBVs herdando de `django.views.View`, **sem consultas ao ORM** (`Model.objects`, `get_object_or_404`).
+  - **Forms:** validação de formato com `Meta.fields` explícito.
+  - **Services:** concentram regras de negócio, ORM, `transaction.atomic()`, `select_for_update()` em ordem fixa (ADR 0013), `AuditoriaService` (ADR 0011) e `NotificacaoService` (ADR 0015); **nunca recebem `request` nem `form`**.
+  - **Models:** sem regra de negócio em `save()` e sem `signals`; usar `TextChoices`, `UniqueConstraint`, `CheckConstraint` e `on_delete=PROTECT` no histórico.
+- **Front-end:** Bootstrap `5.3.9` hospedado em `static/vendor/bootstrap/` + `static/css/remed.css` (**zero CDN externa**, WCAG 2.1 AA) e JavaScript simples em `static/js/` (sem framework JS nem htmx).
+- **Apps na raiz do projeto:** `core`, `nucleo`, `contas`, `auditoria`, `notificacoes`, `pontos_coleta`, `medicamentos`, `solicitacoes`, `correspondencias` (MVP) e `moderacao` (v1.1).
+
+## 4. Comandos essenciais (Windows / PowerShell)
+
+```powershell
+# Ativar ambiente virtual
+.\.venv\Scripts\Activate.ps1
+
+# Lint e verificação de formatação (ADR 0012)
+.venv\Scripts\ruff.exe check .
+.venv\Scripts\ruff.exe format --check .
+
+# Auditoria de vulnerabilidades de dependências (ADR 0012)
+.venv\Scripts\pip-audit.exe -r requirements.txt
+
+# Checagem do Django e conexão com o PostgreSQL
+.venv\Scripts\python.exe manage.py check --database default
+
+# Testes automatizados em PostgreSQL (e cobertura opcional)
+.venv\Scripts\python.exe manage.py test --verbosity=2
+.venv\Scripts\coverage.exe run manage.py test && .venv\Scripts\coverage.exe report
+```
+
+## 5. Regras obrigatórias de trabalho
+
+- **Uma etapa por vez:** implementar apenas a etapa autorizada do plano do MVP e parar ao final para revisão.
+- **Aprovação prévia obrigatória:** sempre listar os comandos exatos e aguardar autorização explícita antes de rodar `pip install`, `makemigrations`, `migrate` ou qualquer comando que altere o banco de dados.
+- **Primeira migração de usuário:** antes de gerar a primeira migração, mostrar o modelo `contas.Usuario` e esperar aprovação explícita do usuário.
+- **Falhas e consistência do banco:** se um comando falhar ou o banco ficar inconsistente, pare e mostre o erro ao usuário; nunca apague migrações, tabelas ou bancos sem autorização.
+- **Git:** **nunca** executar `git commit` (nem `git push`); o usuário faz os commits.
+- **Segredos e `.env`:** **nunca** abrir, exibir ou registrar o conteúdo de `.env` (nem segredos/senhas); usar apenas `.env.example` como referência. Rodar `manage.py` e os testes lê o `.env` indiretamente, e isso é permitido; o que é proibido é abrir, exibir ou registrar o conteúdo do `.env`.
+- **PostgreSQL:** **nunca** criar usuários, senhas ou bancos de dados no PostgreSQL.
+- **Dependências:** adicionar somente pacotes previstos no plano (`docs/arquitetura.md`, seção 3.1), com versão fixada por `==` em `requirements.txt` (produção) ou `requirements-dev.txt` (desenvolvimento), e validar com `pip check`.
+- **Escopo estrito:** não alterar arquivos fora do escopo da etapa atual; não implementar código fora das specs aprovadas.
+- **Pendências externas do professor/cliente:** o agente **não decide** as pendências registradas em `docs/prd/01-remed.md` (seção 8) — em especial **Q4 a Q8, Q10 e Q14** (validade mínima restante, janela de refrigerados, verificador de receitas, política de privacidade/LGPD, critérios de aprovação de pontos e tela de login sem CNPJ). Manter os valores provisórios configuráveis documentados nas specs até confirmação formal.
+
+## 6. Estado atual
+
+- **Concluído:** PRD, 20 ADRs aceitas, `docs/arquitetura.md`, 23 specs aprovadas (`01`–`23`) e **Etapa 0** (base `core/`, `.env.example`, `pyproject.toml`, `requirements-dev.txt`, Bootstrap `5.3.9` local, `templates/base.html`, `static/css/remed.css`, `.github/workflows/ci.yml` e conexão verificada com PostgreSQL `18.4`).
+- **Próxima etapa:** **Etapa 1** — base transversal (`nucleo`, `auditoria`, `contas` base com `AUTH_USER_MODEL = "contas.Usuario"`, `notificacoes` outbox mínimo, triggers `BEFORE UPDATE OR DELETE` no PostgreSQL e `argon2-cffi`).
