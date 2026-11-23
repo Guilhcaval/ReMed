@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Encerrar conta · ReMed{% endblock %}
+
+{% block content %}
+  <div class="remed-auth-wrapper-sm">
+    <section class="remed-card p-4 p-md-5 shadow-sm" aria-labelledby="titulo-encerrar">
+      <h1 id="titulo-encerrar" class="h4 fw-bold text-danger mb-2">Encerrar conta</h1>
+      <p class="remed-hint mb-3">
+        Leia com atenção antes de confirmar. Esta ação não pode ser desfeita.
+      </p>
+
+      <div class="alert alert-warning" role="alert">
+        <p class="fw-semibold mb-2">O que acontece ao encerrar sua conta (LGPD):</p>
+        <ul class="mb-0 ps-3 small">
+          <li>Seus dados pessoais identificáveis (nome, CPF, e-mail, celular, data de nascimento e endereço) serão eliminados/anonimizados.</li>
+          <li>Doações disponíveis e solicitações abertas vinculadas à conta serão canceladas automaticamente.</li>
+          <li>Registros anônimos de doações e entregas já realizadas são mantidos apenas para estatísticas.</li>
+          <li>Não é possível encerrar a conta se houver agendamentos confirmados em andamento ou se a conta estiver suspensa ou bloqueada.</li>
+        </ul>
+      </div>
+
+      {% if form.errors %}
+        <div class="remed-error-summary p-3 mb-4" role="alert" aria-live="polite">
+          <ul class="mb-0 ps-3">
+            {% for msg in form.mensagens_resumo_erros %}
+              <li>{{ msg }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      <form method="post" action="{% url 'contas:encerrar_conta' %}" novalidate>
+        {% csrf_token %}
+
+        <div class="mb-3">
+          <label for="{{ form.senha_atual.id_for_label }}" class="form-label fw-medium">
+            Confirme sua senha atual <span class="remed-required-mark" aria-hidden="true">*</span>
+          </label>
+          <input
+            type="password"
+            name="{{ form.senha_atual.html_name }}"
+            id="{{ form.senha_atual.id_for_label }}"
+            class="form-control{% if form.senha_atual.errors %} is-invalid{% endif %}"
+            placeholder="Digite sua senha atual"
+            autocomplete="current-password"
+            required
+            {% if form.senha_atual.errors %}aria-invalid="true" aria-describedby="erro-encerrar-senha"{% endif %}
+          >
+          {% if form.senha_atual.errors %}
+            <div id="erro-encerrar-senha" class="invalid-feedback d-block">
+              {% for erro in form.senha_atual.errors %}{{ erro }}{% endfor %}
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="form-check mb-4">
+          {{ form.confirmar_encerramento }}
+          <label class="form-check-label" for="{{ form.confirmar_encerramento.id_for_label }}">
+            Entendo que esta ação é irreversível e que meus dados pessoais serão eliminados/anonimizados.
+          </label>
+          {% if form.confirmar_encerramento.errors %}
+            <div class="invalid-feedback d-block">
+              {% for erro in form.confirmar_encerramento.errors %}{{ erro }}{% endfor %}
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="d-grid gap-2">
+          <button type="submit" class="btn btn-danger fw-semibold">
+            Confirmar encerramento da conta
+          </button>
+          <a href="{% url 'contas:perfil_editar' %}" class="btn btn-outline-secondary">
+            Cancelar e voltar ao perfil
+          </a>
+        </div>
+      </form>
+    </section>
+  </div>
+{% endblock %}

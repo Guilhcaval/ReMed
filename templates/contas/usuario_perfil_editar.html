@@ -1,0 +1,381 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Meu perfil · ReMed{% endblock %}
+
+{% block navbar_links %}
+  <ul class="navbar-nav ms-auto align-items-lg-center gap-2">
+    <li class="nav-item">
+      <a class="nav-link active fw-medium" aria-current="page" href="{% url 'contas:perfil_editar' %}">
+        Meu perfil
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link text-danger" href="{% url 'contas:encerrar_conta' %}">
+        Encerrar conta
+      </a>
+    </li>
+  </ul>
+{% endblock %}
+
+{% block content %}
+  <div class="remed-auth-wrapper">
+    <section class="remed-card p-3 p-md-5 shadow-sm" aria-labelledby="titulo-perfil">
+      <header class="mb-4">
+        <h1 id="titulo-perfil" class="h3 fw-bold mb-1">Meu perfil</h1>
+        <p class="remed-hint mb-0">
+          Consulte e atualize seus dados cadastrais, perfis de uso e endereço. O CPF não pode ser alterado.
+        </p>
+      </header>
+
+      {% if email_pendente %}
+        <div class="alert alert-info" role="status">
+          Há uma alteração de e-mail aguardando confirmação para
+          <strong>{{ email_pendente }}</strong>. Seu e-mail atual permanece ativo até que você
+          confirme o link enviado ao novo endereço.
+        </div>
+      {% endif %}
+
+      {% if form.errors %}
+        <div class="remed-error-summary p-3 mb-4" role="alert" aria-live="polite">
+          <p class="fw-semibold mb-1">Revise os dados informados:</p>
+          <ul class="mb-0 ps-3">
+            {% for msg in form.mensagens_resumo_erros %}
+              <li>{{ msg }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      <form method="post" action="{% url 'contas:perfil_editar' %}" novalidate>
+        {% csrf_token %}
+
+        <fieldset class="mb-4">
+          <legend class="remed-section-title mb-3">Dados pessoais</legend>
+
+          <div class="mb-3">
+            <label for="{{ form.nome_completo.id_for_label }}" class="form-label fw-medium">
+              Nome completo <span class="remed-required-mark" aria-hidden="true">*</span>
+            </label>
+            <input
+              type="text"
+              name="{{ form.nome_completo.html_name }}"
+              id="{{ form.nome_completo.id_for_label }}"
+              value="{{ form.nome_completo.value|default_if_none:'' }}"
+              class="form-control{% if form.nome_completo.errors %} is-invalid{% endif %}"
+              maxlength="120"
+              required
+              {% if form.nome_completo.errors %}aria-invalid="true" aria-describedby="erro-perfil-nome"{% endif %}
+            >
+            {% if form.nome_completo.errors %}
+              <div id="erro-perfil-nome" class="invalid-feedback d-block">
+                {% for erro in form.nome_completo.errors %}{{ erro }}{% endfor %}
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-12 col-md-6">
+              <label for="id_cpf_somente_leitura" class="form-label fw-medium">CPF</label>
+              <input
+                type="text"
+                id="id_cpf_somente_leitura"
+                value="{{ cpf_formatado }}"
+                class="form-control remed-readonly-field"
+                readonly
+                aria-readonly="true"
+                aria-describedby="dica-cpf-fixo"
+              >
+              <div id="dica-cpf-fixo" class="remed-hint mt-1">
+                O CPF não pode ser alterado após o cadastro.
+              </div>
+            </div>
+
+            <div class="col-12 col-md-6">
+              <label for="{{ form.data_nascimento.id_for_label }}" class="form-label fw-medium">
+                Data de nascimento <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              <input
+                type="text"
+                name="{{ form.data_nascimento.html_name }}"
+                id="{{ form.data_nascimento.id_for_label }}"
+                value="{{ form.data_nascimento.value|date:'d/m/Y'|default:form.data_nascimento.value|default_if_none:'' }}"
+                class="form-control{% if form.data_nascimento.errors %} is-invalid{% endif %}"
+                placeholder="dd/mm/aaaa"
+                inputmode="numeric"
+                maxlength="10"
+                data-mascara="data"
+                required
+                {% if form.data_nascimento.errors %}aria-invalid="true" aria-describedby="erro-perfil-nasc"{% endif %}
+              >
+              {% if form.data_nascimento.errors %}
+                <div id="erro-perfil-nasc" class="invalid-feedback d-block">
+                  {% for erro in form.data_nascimento.errors %}{{ erro }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-12 col-md-6">
+              <label for="{{ form.email.id_for_label }}" class="form-label fw-medium">
+                E-mail <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              <input
+                type="email"
+                name="{{ form.email.html_name }}"
+                id="{{ form.email.id_for_label }}"
+                value="{{ form.email.value|default_if_none:'' }}"
+                class="form-control{% if form.email.errors %} is-invalid{% endif %}"
+                maxlength="254"
+                required
+                aria-describedby="dica-perfil-email{% if form.email.errors %} erro-perfil-email{% endif %}"
+                {% if form.email.errors %}aria-invalid="true"{% endif %}
+              >
+              <div id="dica-perfil-email" class="remed-hint mt-1">
+                Ao alterar o e-mail, o atual permanece ativo até a confirmação do novo endereço.
+              </div>
+              {% if form.email.errors %}
+                <div id="erro-perfil-email" class="invalid-feedback d-block">
+                  {% for erro in form.email.errors %}{{ erro }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="col-12 col-md-6">
+              <label for="{{ form.celular.id_for_label }}" class="form-label fw-medium">
+                Celular <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              <input
+                type="text"
+                name="{{ form.celular.html_name }}"
+                id="{{ form.celular.id_for_label }}"
+                value="{{ form.celular.value|default_if_none:'' }}"
+                class="form-control{% if form.celular.errors %} is-invalid{% endif %}"
+                inputmode="tel"
+                maxlength="15"
+                data-mascara="celular"
+                required
+                {% if form.celular.errors %}aria-invalid="true" aria-describedby="erro-perfil-celular"{% endif %}
+              >
+              {% if form.celular.errors %}
+                <div id="erro-perfil-celular" class="invalid-feedback d-block">
+                  {% for erro in form.celular.errors %}{{ erro }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </fieldset>
+
+        <hr class="remed-section-divider my-4">
+
+        <fieldset class="mb-4">
+          <legend class="remed-section-title mb-2">Perfis de uso</legend>
+          <div class="d-flex flex-wrap gap-3">
+            <div class="form-check remed-check-touch">
+              {{ form.perfil_doador }}
+              <label class="form-check-label" for="{{ form.perfil_doador.id_for_label }}">
+                Doador
+              </label>
+            </div>
+            <div class="form-check remed-check-touch">
+              {{ form.perfil_solicitante }}
+              <label class="form-check-label" for="{{ form.perfil_solicitante.id_for_label }}">
+                Solicitante
+              </label>
+            </div>
+            <div class="form-check remed-check-touch">
+              {{ form.perfil_cuidador }}
+              <label class="form-check-label" for="{{ form.perfil_cuidador.id_for_label }}">
+                Cuidador/Familiar
+              </label>
+            </div>
+          </div>
+          {% if form.perfil_doador.errors %}
+            <div class="invalid-feedback d-block mt-1">
+              {% for erro in form.perfil_doador.errors %}{{ erro }}{% endfor %}
+            </div>
+          {% endif %}
+        </fieldset>
+
+        <hr class="remed-section-divider my-4">
+
+        <fieldset class="mb-4">
+          <legend class="remed-section-title mb-3">Seu endereço</legend>
+
+          <div class="row g-3 align-items-end mb-3">
+            <div class="col-12 col-sm-5 col-md-4">
+              <label for="{{ form.cep.id_for_label }}" class="form-label fw-medium">
+                CEP <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              <input
+                type="text"
+                name="{{ form.cep.html_name }}"
+                id="{{ form.cep.id_for_label }}"
+                value="{{ form.cep.value|default_if_none:'' }}"
+                class="form-control{% if form.cep.errors %} is-invalid{% endif %}"
+                inputmode="numeric"
+                maxlength="9"
+                data-mascara="cep"
+                data-cep-url-base="{% url 'nucleo:cep_consultar' cep='00000000' %}"
+                required
+              >
+            </div>
+            <div class="col-12 col-sm-7 col-md-8 pb-2">
+              <a
+                href="https://buscacepinter.correios.com.br/app/endereco/index.php"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="link-primary fw-medium"
+              >
+                Não sei meu CEP
+              </a>
+            </div>
+          </div>
+          <div id="cep-status-msg" class="remed-hint mb-2" aria-live="polite"></div>
+          {% if form.cep.errors %}
+            <div class="invalid-feedback d-block mb-3">
+              {% for erro in form.cep.errors %}{{ erro }}{% endfor %}
+            </div>
+          {% endif %}
+
+          <div class="row g-3 mb-3">
+            <div class="col-12 col-md-8">
+              <label for="{{ form.logradouro.id_for_label }}" class="form-label fw-medium">
+                Logradouro <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              <input
+                type="text"
+                name="{{ form.logradouro.html_name }}"
+                id="{{ form.logradouro.id_for_label }}"
+                value="{{ form.logradouro.value|default_if_none:'' }}"
+                class="form-control{% if form.logradouro.errors %} is-invalid{% endif %}"
+                maxlength="150"
+                required
+              >
+              {% if form.logradouro.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for erro in form.logradouro.errors %}{{ erro }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+            <div class="col-12 col-md-4">
+              <label for="{{ form.numero.id_for_label }}" class="form-label fw-medium">
+                Número <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              <input
+                type="text"
+                name="{{ form.numero.html_name }}"
+                id="{{ form.numero.id_for_label }}"
+                value="{{ form.numero.value|default_if_none:'' }}"
+                class="form-control{% if form.numero.errors %} is-invalid{% endif %}"
+                maxlength="20"
+                required
+              >
+              {% if form.numero.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for erro in form.numero.errors %}{{ erro }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-12 col-md-5">
+              <label for="{{ form.bairro.id_for_label }}" class="form-label fw-medium">
+                Bairro <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              <input
+                type="text"
+                name="{{ form.bairro.html_name }}"
+                id="{{ form.bairro.id_for_label }}"
+                value="{{ form.bairro.value|default_if_none:'' }}"
+                class="form-control{% if form.bairro.errors %} is-invalid{% endif %}"
+                maxlength="100"
+                required
+              >
+              {% if form.bairro.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for erro in form.bairro.errors %}{{ erro }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+            <div class="col-12 col-md-5">
+              <label for="{{ form.municipio.id_for_label }}" class="form-label fw-medium">
+                Município <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              <input
+                type="text"
+                name="{{ form.municipio.html_name }}"
+                id="{{ form.municipio.id_for_label }}"
+                value="{{ form.municipio.value|default_if_none:'' }}"
+                class="form-control{% if form.municipio.errors %} is-invalid{% endif %}"
+                maxlength="100"
+                required
+              >
+              {% if form.municipio.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for erro in form.municipio.errors %}{{ erro }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+            <div class="col-12 col-md-2">
+              <label for="{{ form.estado.id_for_label }}" class="form-label fw-medium">
+                Estado <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              <select
+                name="{{ form.estado.html_name }}"
+                id="{{ form.estado.id_for_label }}"
+                class="form-select{% if form.estado.errors %} is-invalid{% endif %}"
+                required
+              >
+                {% for valor, rotulo in form.estado.field.choices %}
+                  <option value="{{ valor }}"{% if form.estado.value == valor %} selected{% endif %}>
+                    {% if valor %}{{ valor }}{% else %}{{ rotulo }}{% endif %}
+                  </option>
+                {% endfor %}
+              </select>
+              {% if form.estado.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for erro in form.estado.errors %}{{ erro }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="{{ form.complemento.id_for_label }}" class="form-label fw-medium">
+              Complemento (opcional)
+            </label>
+            <input
+              type="text"
+              name="{{ form.complemento.html_name }}"
+              id="{{ form.complemento.id_for_label }}"
+              value="{{ form.complemento.value|default_if_none:'' }}"
+              class="form-control{% if form.complemento.errors %} is-invalid{% endif %}"
+              maxlength="100"
+            >
+            {% if form.complemento.errors %}
+              <div class="invalid-feedback d-block">
+                {% for erro in form.complemento.errors %}{{ erro }}{% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        </fieldset>
+
+        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
+          <button type="submit" class="btn btn-primary fw-semibold px-4">
+            Salvar alterações
+          </button>
+          <a href="{% url 'contas:encerrar_conta' %}" class="btn btn-outline-danger">
+            Solicitar encerramento de conta
+          </a>
+        </div>
+      </form>
+    </section>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'js/cadastro.js' %}" defer></script>
+{% endblock %}

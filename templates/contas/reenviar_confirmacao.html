@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Reenviar confirmação de e-mail · ReMed{% endblock %}
+
+{% block content %}
+  <div class="remed-auth-wrapper-sm">
+    <section class="remed-card p-4 p-md-5 shadow-sm" aria-labelledby="titulo-reenvio">
+      <h1 id="titulo-reenvio" class="h4 fw-bold mb-2">Reenviar link de confirmação</h1>
+      <p class="remed-hint mb-4">
+        Informe o e-mail usado no cadastro para receber um novo link de confirmação válido por 24 horas.
+      </p>
+
+      {% if form.errors %}
+        <div class="remed-error-summary p-3 mb-4" role="alert" aria-live="polite">
+          <ul class="mb-0 ps-3">
+            {% for msg in form.mensagens_resumo_erros %}
+              <li>{{ msg }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      <form method="post" action="{% url 'contas:reenviar_confirmacao' %}" novalidate>
+        {% csrf_token %}
+        <div class="mb-3">
+          <label for="{{ form.email.id_for_label }}" class="form-label fw-medium">
+            E-mail cadastrado <span class="remed-required-mark" aria-hidden="true">*</span>
+          </label>
+          <input
+            type="email"
+            name="{{ form.email.html_name }}"
+            id="{{ form.email.id_for_label }}"
+            value="{{ form.email.value|default_if_none:'' }}"
+            class="form-control{% if form.email.errors %} is-invalid{% endif %}"
+            placeholder="seuemail@exemplo.com"
+            autocomplete="email"
+            required
+            {% if form.email.errors %}aria-invalid="true" aria-describedby="erro-reenvio-email"{% endif %}
+          >
+          {% if form.email.errors %}
+            <div id="erro-reenvio-email" class="invalid-feedback d-block">
+              {% for erro in form.email.errors %}{{ erro }}{% endfor %}
+            </div>
+          {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100 fw-semibold">
+          Enviar novo link de confirmação
+        </button>
+
+        <div class="text-center mt-3">
+          <a href="{% url 'contas:cadastro' %}" class="small">Voltar para o cadastro</a>
+        </div>
+      </form>
+    </section>
+  </div>
+{% endblock %}

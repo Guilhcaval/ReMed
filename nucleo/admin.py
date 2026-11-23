@@ -1,0 +1,34 @@
+from django.contrib import admin
+
+from nucleo.models import CacheCep, ExecucaoRotina
+
+
+@admin.register(CacheCep)
+class CacheCepAdmin(admin.ModelAdmin):
+    list_display = ("cep", "municipio", "estado", "fonte", "atualizado_em")
+    search_fields = ("cep", "municipio", "bairro")
+    readonly_fields = ("atualizado_em",)
+
+
+@admin.register(ExecucaoRotina)
+class ExecucaoRotinaAdmin(admin.ModelAdmin):
+    list_display = ("nome_rotina", "iniciada_em", "finalizada_em", "tentativa", "resultado")
+    list_filter = ("nome_rotina", "resultado")
+    readonly_fields = (
+        "nome_rotina",
+        "iniciada_em",
+        "finalizada_em",
+        "tentativa",
+        "resultado",
+        "contadores",
+        "resumo_erro",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

@@ -191,7 +191,7 @@ As convenções abaixo complementam a [ADR 0001](adr/0001-django-mvt-com-camada-
 ### 4.4 Forms, Models e Admin
 
 - **Forms:** nomeados `<Recurso><Acao>Form` (ex.: `UsuarioCadastroForm`, `LoginForm`), sempre com `Meta.fields` explícito (nunca `fields = "__all__"` nem exposição de `status`, `perfil`, `autor` ou campos do sistema) e mensagens literais do catálogo.
-- **Models:** status sempre em `models.TextChoices` com valores do catálogo; `USE_TZ = True`; `on_delete=models.PROTECT` onde cascata apagaria histórico; constraints (`UniqueConstraint`, `CheckConstraint`) e índices explícitos em `Meta`; `__str__` sem expor dados sensíveis (nunca CPF completo, senha ou receita).
+- **Models:** status sempre em `models.TextChoices` com valores do catálogo; `USE_TZ = True`; `on_delete=models.PROTECT` onde cascata apagaria histórico; constraints (`UniqueConstraint`, `CheckConstraint`) e índices explícitos em `Meta`; `__str__` sem expor dados sensíveis (nunca CPF completo, senha ou receita). A sincronização entre `Usuario.status` e `Usuario.is_active` ocorre exclusivamente nos services (nunca em `save()`), e o backend de autenticação verifica explicitamente `status == "ativo"`, `email_confirmado_em` e `anonimizado_em`.
 - **Django Admin:** uso restrito para consulta operacional; escrita bloqueada nos models críticos (e estritamente somente leitura em `RegistroAuditoria` e na tabela de acessos).
 
 ### 4.5 Templates e arquivos estáticos (`templates/`, `static/`)

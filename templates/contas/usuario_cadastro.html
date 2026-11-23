@@ -1,0 +1,640 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Criar conta · ReMed — Cadastro de pessoa física{% endblock %}
+
+{% block navbar_links %}
+  <ul class="navbar-nav ms-auto align-items-lg-center gap-2">
+    <li class="nav-item">
+      <a class="nav-link active fw-medium" aria-current="page" href="{% url 'contas:cadastro' %}">
+        Criar conta
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" href="{% url 'contas:reenviar_confirmacao' %}">
+        Reenviar confirmação
+      </a>
+    </li>
+  </ul>
+{% endblock %}
+
+{% block content %}
+  <div class="remed-auth-wrapper">
+    <section class="remed-card p-3 p-sm-4 p-md-5 shadow-sm" aria-labelledby="titulo-cadastro">
+      <header class="text-center mb-4">
+        <div class="d-flex justify-content-center mb-2">
+          <img
+            src="{% static 'img/logo.png' %}"
+            alt="ReMed"
+            width="68"
+            height="72"
+            class="remed-auth-logo"
+            decoding="async"
+          >
+        </div>
+        <h1 id="titulo-cadastro" class="h3 fw-bold remed-auth-title mb-1">Criar conta · ReMed</h1>
+        <p class="remed-hint mb-0">Cadastro de pessoa física</p>
+      </header>
+
+      <div class="remed-tabs-segment row g-1 mb-4" role="tablist" aria-label="Tipo de cadastro">
+        <div class="col-12 col-sm-6">
+          <span
+            class="remed-tab-item is-active d-flex align-items-center justify-content-center text-center w-100"
+            role="tab"
+            aria-selected="true"
+          >
+            <span><strong class="fw-semibold">Pessoa Física</strong> · Doador / Solicitante</span>
+          </span>
+        </div>
+        <div class="col-12 col-sm-6">
+          <span
+            class="remed-tab-item is-disabled d-flex flex-wrap align-items-center justify-content-center text-center gap-2 w-100"
+            role="tab"
+            aria-selected="false"
+            aria-disabled="true"
+            title="Cadastro de Pessoa Jurídica / Ponto de Coleta disponível em breve (Spec 05)"
+          >
+            <span>Pessoa Jurídica · Ponto de Coleta</span>
+            <span class="badge text-bg-secondary fw-normal">Em breve</span>
+          </span>
+        </div>
+      </div>
+
+      {% if form.errors %}
+        <div class="remed-error-summary p-3 mb-4" role="alert" aria-live="polite">
+          <p class="fw-semibold mb-1">Não foi possível concluir o cadastro:</p>
+          <ul class="mb-0 ps-3">
+            {% for msg in form.mensagens_resumo_erros %}
+              <li>{{ msg }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      <form method="post" action="{% url 'contas:cadastro' %}" novalidate>
+        {% csrf_token %}
+
+        <fieldset class="mb-4">
+          <legend class="remed-section-title mb-1">Dados pessoais</legend>
+          <p class="remed-hint mb-3">
+            Preencha seus dados para fazer parte da rede. Os campos com
+            <span class="remed-required-mark" aria-hidden="true">*</span>
+            <span class="visually-hidden">asterisco</span> são obrigatórios.
+          </p>
+
+          <div class="mb-3">
+            <label for="{{ form.nome_completo.id_for_label }}" class="form-label fw-medium">
+              Nome completo <span class="remed-required-mark" aria-hidden="true">*</span>
+            </label>
+            <input
+              type="text"
+              name="{{ form.nome_completo.html_name }}"
+              id="{{ form.nome_completo.id_for_label }}"
+              value="{{ form.nome_completo.value|default_if_none:'' }}"
+              class="form-control{% if form.nome_completo.errors %} is-invalid{% endif %}"
+              placeholder="Digite seu nome completo"
+              autocomplete="name"
+              maxlength="120"
+              required
+              aria-describedby="dica-nome{% if form.nome_completo.errors %} erro-nome{% endif %}"
+              {% if form.nome_completo.errors %}aria-invalid="true"{% endif %}
+            >
+            <div id="dica-nome" class="remed-hint mt-1">De 3 a 120 caracteres.</div>
+            {% if form.nome_completo.errors %}
+              <div id="erro-nome" class="invalid-feedback d-block">
+                {% for erro in form.nome_completo.errors %}{{ erro }}{% endfor %}
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="row g-3 mb-2">
+            <div class="col-12 col-md-6">
+              <label for="{{ form.cpf.id_for_label }}" class="form-label fw-medium">
+                CPF <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              <input
+                type="text"
+                name="{{ form.cpf.html_name }}"
+                id="{{ form.cpf.id_for_label }}"
+                value="{{ form.cpf.value|default_if_none:'' }}"
+                class="form-control{% if form.cpf.errors %} is-invalid{% endif %}"
+                placeholder="000.000.000-00"
+                inputmode="numeric"
+                maxlength="14"
+                data-mascara="cpf"
+                required
+                aria-describedby="dica-cpf{% if form.cpf.errors %} erro-cpf{% endif %}"
+                {% if form.cpf.errors %}aria-invalid="true"{% endif %}
+              >
+              <div id="dica-cpf" class="remed-hint mt-1">
+                Informe um CPF válido e ainda não cadastrado.
+              </div>
+              {% if form.cpf.errors %}
+                <div id="erro-cpf" class="invalid-feedback d-block">
+                  {% for erro in form.cpf.errors %}{{ erro }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="col-12 col-md-6">
+              <label for="{{ form.data_nascimento.id_for_label }}" class="form-label fw-medium">
+                Data de nascimento <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              <input
+                type="text"
+                name="{{ form.data_nascimento.html_name }}"
+                id="{{ form.data_nascimento.id_for_label }}"
+                value="{{ form.data_nascimento.value|default_if_none:'' }}"
+                class="form-control{% if form.data_nascimento.errors %} is-invalid{% endif %}"
+                placeholder="dd/mm/aaaa"
+                inputmode="numeric"
+                autocomplete="bday"
+                maxlength="10"
+                data-mascara="data"
+                required
+                aria-describedby="dica-nascimento aviso-menores{% if form.data_nascimento.errors %} erro-nascimento{% endif %}"
+                {% if form.data_nascimento.errors %}aria-invalid="true"{% endif %}
+              >
+              <div id="dica-nascimento" class="remed-hint mt-1">Cadastro para maiores de 18 anos.</div>
+              {% if form.data_nascimento.errors %}
+                <div id="erro-nascimento" class="invalid-feedback d-block">
+                  {% for erro in form.data_nascimento.errors %}{{ erro }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <p id="aviso-menores" class="remed-hint mb-3">
+            Menores de 18 anos devem ser representados por um cuidador ou familiar.
+          </p>
+
+          <div class="row g-3 mb-3">
+            <div class="col-12 col-md-6">
+              <label for="{{ form.email.id_for_label }}" class="form-label fw-medium">
+                E-mail <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              <input
+                type="email"
+                name="{{ form.email.html_name }}"
+                id="{{ form.email.id_for_label }}"
+                value="{{ form.email.value|default_if_none:'' }}"
+                class="form-control{% if form.email.errors %} is-invalid{% endif %}"
+                placeholder="seuemail@exemplo.com"
+                autocomplete="email"
+                maxlength="254"
+                required
+                aria-describedby="dica-email{% if form.email.errors %} erro-email{% endif %}"
+                {% if form.email.errors %}aria-invalid="true"{% endif %}
+              >
+              <div id="dica-email" class="remed-hint mt-1">
+                Use um e-mail não cadastrado. Enviaremos a confirmação.
+              </div>
+              {% if form.email.errors %}
+                <div id="erro-email" class="invalid-feedback d-block">
+                  {% for erro in form.email.errors %}{{ erro }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="col-12 col-md-6">
+              <label for="{{ form.celular.id_for_label }}" class="form-label fw-medium">
+                Celular <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              <input
+                type="text"
+                name="{{ form.celular.html_name }}"
+                id="{{ form.celular.id_for_label }}"
+                value="{{ form.celular.value|default_if_none:'' }}"
+                class="form-control{% if form.celular.errors %} is-invalid{% endif %}"
+                placeholder="(00) 00000-0000"
+                inputmode="tel"
+                autocomplete="tel-national"
+                maxlength="15"
+                data-mascara="celular"
+                required
+                aria-describedby="{% if form.celular.errors %}erro-celular{% endif %}"
+                {% if form.celular.errors %}aria-invalid="true"{% endif %}
+              >
+              {% if form.celular.errors %}
+                <div id="erro-celular" class="invalid-feedback d-block">
+                  {% for erro in form.celular.errors %}{{ erro }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="mb-2">
+            <label for="{{ form.senha.id_for_label }}" class="form-label fw-medium">
+              Senha <span class="remed-required-mark" aria-hidden="true">*</span>
+            </label>
+            <div class="input-group remed-password-group{% if form.senha.errors %} is-invalid{% endif %}">
+              <input
+                type="password"
+                name="{{ form.senha.html_name }}"
+                id="{{ form.senha.id_for_label }}"
+                class="form-control"
+                placeholder="Crie sua senha"
+                autocomplete="new-password"
+                required
+                aria-describedby="dica-senha{% if form.senha.errors %} erro-senha{% endif %}"
+                {% if form.senha.errors %}aria-invalid="true"{% endif %}
+              >
+              <button
+                type="button"
+                class="btn remed-password-toggle"
+                data-toggle-senha="{{ form.senha.id_for_label }}"
+                aria-pressed="false"
+                aria-label="Mostrar senha"
+              >
+                Mostrar
+              </button>
+            </div>
+            <div id="dica-senha" class="remed-hint mt-1">
+              Use no mínimo 8 caracteres.
+            </div>
+            {% if form.senha.errors %}
+              <div id="erro-senha" class="invalid-feedback d-block">
+                {% for erro in form.senha.errors %}{{ erro }}{% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        </fieldset>
+
+        <hr class="remed-section-divider my-4">
+
+        <fieldset class="mb-4" aria-describedby="dica-perfis{% if form.perfil_doador.errors %} erro-perfis{% endif %}">
+          <legend class="remed-section-title mb-1">
+            Como você quer usar o ReMed?
+          </legend>
+          <p id="dica-perfis" class="remed-hint mb-3">
+            Selecione um ou mais perfis. Você pode doar, solicitar e cuidar.
+          </p>
+
+          <div class="d-flex flex-wrap gap-3 gap-md-4">
+            <div class="form-check remed-check-touch">
+              {{ form.perfil_doador }}
+              <label class="form-check-label" for="{{ form.perfil_doador.id_for_label }}">
+                Doador
+              </label>
+            </div>
+            <div class="form-check remed-check-touch">
+              {{ form.perfil_solicitante }}
+              <label class="form-check-label" for="{{ form.perfil_solicitante.id_for_label }}">
+                Solicitante
+              </label>
+            </div>
+            <div class="form-check remed-check-touch">
+              {{ form.perfil_cuidador }}
+              <label class="form-check-label" for="{{ form.perfil_cuidador.id_for_label }}">
+                Cuidador/Familiar
+              </label>
+            </div>
+          </div>
+          {% if form.perfil_doador.errors %}
+            <div id="erro-perfis" class="invalid-feedback d-block mt-1">
+              {% for erro in form.perfil_doador.errors %}{{ erro }}{% endfor %}
+            </div>
+          {% endif %}
+        </fieldset>
+
+        <hr class="remed-section-divider my-4">
+
+        <fieldset class="mb-4">
+          <legend class="remed-section-title mb-1">Seu endereço</legend>
+          <p class="remed-hint mb-3">
+            Informe o CEP para preencher o endereço automaticamente. Depois, edite o número e o complemento.
+          </p>
+
+          <div class="row g-3 align-items-end mb-2">
+            <div class="col-12 col-sm-5 col-md-4">
+              <label for="{{ form.cep.id_for_label }}" class="form-label fw-medium">
+                CEP <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              <input
+                type="text"
+                name="{{ form.cep.html_name }}"
+                id="{{ form.cep.id_for_label }}"
+                value="{{ form.cep.value|default_if_none:'' }}"
+                class="form-control{% if form.cep.errors %} is-invalid{% endif %}"
+                placeholder="00000-000"
+                inputmode="numeric"
+                autocomplete="postal-code"
+                maxlength="9"
+                data-mascara="cep"
+                data-cep-url-base="{% url 'nucleo:cep_consultar' cep='00000000' %}"
+                required
+                aria-describedby="cep-status-msg{% if form.cep.errors %} erro-cep{% endif %}"
+                {% if form.cep.errors %}aria-invalid="true"{% endif %}
+              >
+            </div>
+            <div class="col-12 col-sm-7 col-md-8 d-flex align-items-center pb-2">
+              <a
+                href="https://buscacepinter.correios.com.br/app/endereco/index.php"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="remed-cep-help-link"
+              >
+                Não sei meu CEP
+                <span class="visually-hidden">(abre busca oficial dos Correios em nova aba)</span>
+              </a>
+            </div>
+          </div>
+          <div id="cep-status-msg" class="remed-hint mb-3" aria-live="polite"></div>
+          {% if form.cep.errors %}
+            <div id="erro-cep" class="invalid-feedback d-block mb-3">
+              {% for erro in form.cep.errors %}{{ erro }}{% endfor %}
+            </div>
+          {% endif %}
+
+          <div class="row g-3 mb-3">
+            <div class="col-12 col-md-8">
+              <label for="{{ form.logradouro.id_for_label }}" class="form-label fw-medium">
+                Logradouro <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              <input
+                type="text"
+                name="{{ form.logradouro.html_name }}"
+                id="{{ form.logradouro.id_for_label }}"
+                value="{{ form.logradouro.value|default_if_none:'' }}"
+                class="form-control{% if form.logradouro.errors %} is-invalid{% endif %}"
+                placeholder="Preenchido pelo CEP"
+                autocomplete="street-address"
+                maxlength="150"
+                required
+                {% if form.logradouro.errors %}aria-invalid="true" aria-describedby="erro-logradouro"{% endif %}
+              >
+              {% if form.logradouro.errors %}
+                <div id="erro-logradouro" class="invalid-feedback d-block">
+                  {% for erro in form.logradouro.errors %}{{ erro }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="col-12 col-md-4">
+              <label for="{{ form.numero.id_for_label }}" class="form-label fw-medium">
+                Número <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              <input
+                type="text"
+                name="{{ form.numero.html_name }}"
+                id="{{ form.numero.id_for_label }}"
+                value="{{ form.numero.value|default_if_none:'' }}"
+                class="form-control{% if form.numero.errors %} is-invalid{% endif %}"
+                placeholder="Ex.: 123"
+                maxlength="20"
+                required
+                {% if form.numero.errors %}aria-invalid="true" aria-describedby="erro-numero"{% endif %}
+              >
+              {% if form.numero.errors %}
+                <div id="erro-numero" class="invalid-feedback d-block">
+                  {% for erro in form.numero.errors %}{{ erro }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-12 col-md-5">
+              <label for="{{ form.bairro.id_for_label }}" class="form-label fw-medium">
+                Bairro <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              <input
+                type="text"
+                name="{{ form.bairro.html_name }}"
+                id="{{ form.bairro.id_for_label }}"
+                value="{{ form.bairro.value|default_if_none:'' }}"
+                class="form-control{% if form.bairro.errors %} is-invalid{% endif %}"
+                placeholder="Preenchido pelo CEP"
+                maxlength="100"
+                required
+                {% if form.bairro.errors %}aria-invalid="true" aria-describedby="erro-bairro"{% endif %}
+              >
+              {% if form.bairro.errors %}
+                <div id="erro-bairro" class="invalid-feedback d-block">
+                  {% for erro in form.bairro.errors %}{{ erro }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="col-12 col-md-5">
+              <label for="{{ form.municipio.id_for_label }}" class="form-label fw-medium">
+                Município <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              <input
+                type="text"
+                name="{{ form.municipio.html_name }}"
+                id="{{ form.municipio.id_for_label }}"
+                value="{{ form.municipio.value|default_if_none:'' }}"
+                class="form-control{% if form.municipio.errors %} is-invalid{% endif %}"
+                placeholder="Preenchido pelo CEP"
+                autocomplete="address-level2"
+                maxlength="100"
+                required
+                {% if form.municipio.errors %}aria-invalid="true" aria-describedby="erro-municipio"{% endif %}
+              >
+              {% if form.municipio.errors %}
+                <div id="erro-municipio" class="invalid-feedback d-block">
+                  {% for erro in form.municipio.errors %}{{ erro }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="col-12 col-md-2">
+              <label for="{{ form.estado.id_for_label }}" class="form-label fw-medium">
+                Estado <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              <select
+                name="{{ form.estado.html_name }}"
+                id="{{ form.estado.id_for_label }}"
+                class="form-select{% if form.estado.errors %} is-invalid{% endif %}"
+                autocomplete="address-level1"
+                required
+                {% if form.estado.errors %}aria-invalid="true" aria-describedby="erro-estado"{% endif %}
+              >
+                {% for valor, rotulo in form.estado.field.choices %}
+                  <option value="{{ valor }}"{% if form.estado.value == valor %} selected{% endif %}>
+                    {% if valor %}{{ valor }}{% else %}{{ rotulo }}{% endif %}
+                  </option>
+                {% endfor %}
+              </select>
+              {% if form.estado.errors %}
+                <div id="erro-estado" class="invalid-feedback d-block">
+                  {% for erro in form.estado.errors %}{{ erro }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="{{ form.complemento.id_for_label }}" class="form-label fw-medium">
+              Complemento (opcional)
+            </label>
+            <input
+              type="text"
+              name="{{ form.complemento.html_name }}"
+              id="{{ form.complemento.id_for_label }}"
+              value="{{ form.complemento.value|default_if_none:'' }}"
+              class="form-control{% if form.complemento.errors %} is-invalid{% endif %}"
+              placeholder="Apartamento, bloco, sala ou referência"
+              maxlength="100"
+              {% if form.complemento.errors %}aria-invalid="true" aria-describedby="erro-complemento"{% endif %}
+            >
+            {% if form.complemento.errors %}
+              <div id="erro-complemento" class="invalid-feedback d-block">
+                {% for erro in form.complemento.errors %}{{ erro }}{% endfor %}
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="remed-banner-info p-3 d-flex align-items-start gap-2" role="note">
+            <span class="remed-info-icon" aria-hidden="true">i</span>
+            <p class="mb-0 small">
+              Seu endereço é usado apenas para localização aproximada e não será exibido a outros usuários.
+            </p>
+          </div>
+        </fieldset>
+
+        <div class="mb-4">
+          <div class="form-check d-flex align-items-start gap-2">
+            <input
+              type="checkbox"
+              name="{{ form.aceite_termos.html_name }}"
+              id="{{ form.aceite_termos.id_for_label }}"
+              class="form-check-input remed-terms-check{% if form.aceite_termos.errors %} is-invalid{% endif %}"
+              {% if form.aceite_termos.value %}checked{% endif %}
+              required
+            >
+            <label class="form-check-label" for="{{ form.aceite_termos.id_for_label }}">
+              Li e aceito os
+              <button
+                type="button"
+                class="remed-inline-link"
+                data-bs-toggle="modal"
+                data-bs-target="#modalTermosUso"
+              >
+                Termos de Uso
+              </button>
+              e a
+              <button
+                type="button"
+                class="remed-inline-link"
+                data-bs-toggle="modal"
+                data-bs-target="#modalPoliticaPrivacidade"
+              >
+                Política de Privacidade
+              </button>.
+              <span class="remed-required-mark" aria-hidden="true">*</span>
+            </label>
+          </div>
+          {% if form.aceite_termos.errors %}
+            <div class="invalid-feedback d-block mt-1">
+              {% for erro in form.aceite_termos.errors %}{{ erro }}{% endfor %}
+            </div>
+          {% endif %}
+          <p class="remed-hint mt-2 mb-0">
+            A data do cadastro é registrada automaticamente pelo sistema.
+          </p>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100 fw-semibold">
+          Cadastrar usuário
+        </button>
+
+        <div class="text-center mt-3">
+          <p class="mb-1 small text-secondary">
+            Já tem uma conta?
+            <a href="/contas/entrar/" class="fw-semibold text-decoration-none">Entrar</a>
+          </p>
+          <p class="mb-0 small text-secondary">
+            Não recebeu o e-mail de confirmação?
+            <a href="{% url 'contas:reenviar_confirmacao' %}">Reenviar link de confirmação</a>
+          </p>
+        </div>
+      </form>
+    </section>
+
+    <p class="text-center remed-hint mt-4 mb-0">
+      ReMed · Conectando cuidado, compartilhando saúde.
+    </p>
+  </div>
+
+  {# Acréscimo da especificação (aprovado): modais rascunho até definição formal da Q8 do PRD #}
+  <div
+    class="modal fade"
+    id="modalTermosUso"
+    tabindex="-1"
+    aria-labelledby="modalTermosUsoLabel"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title fs-5" id="modalTermosUsoLabel">
+            Termos de Uso — Versão {{ versao_termos }}
+          </h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-warning small" role="note">
+            <strong>Texto provisório (rascunho):</strong> versão <code>{{ versao_termos }}</code>
+            utilizada durante o MVP até definição jurídica final (Questão 8 do PRD).
+          </div>
+          <p>
+            O ReMed conecta doadores, solicitantes/cuidadores e pontos de coleta para a
+            redistribuição responsável de medicamentos dentro da validade.
+          </p>
+          <p>
+            O cadastro é restrito a pessoas físicas maiores de 18 anos com dados verídicos.
+            O ReMed não substitui avaliação médica ou farmacêutica e proíbe a comercialização
+            de medicamentos na plataforma.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Fechar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div
+    class="modal fade"
+    id="modalPoliticaPrivacidade"
+    tabindex="-1"
+    aria-labelledby="modalPoliticaPrivacidadeLabel"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title fs-5" id="modalPoliticaPrivacidadeLabel">
+            Política de Privacidade — Versão {{ versao_termos }}
+          </h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-warning small" role="note">
+            <strong>Texto provisório (rascunho):</strong> versão <code>{{ versao_termos }}</code>
+            utilizada durante o MVP até definição jurídica final e prazos de retenção LGPD (Questão 8 do PRD).
+          </div>
+          <p>
+            Coletamos apenas os dados pessoais necessários para identificação segura,
+            comunicação pela plataforma e cálculo de localização aproximada por CEP.
+            Seu endereço nunca é exibido a outros usuários.
+          </p>
+          <p>
+            Você pode consultar, corrigir seus dados (exceto CPF) e solicitar o encerramento
+            da conta com eliminação/anonimização dos dados pessoais, preservando apenas
+            registros anônimos para estatísticas.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Fechar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'js/cadastro.js' %}" defer></script>
+{% endblock %}

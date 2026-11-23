@@ -138,16 +138,17 @@ Permitir que qualquer pessoa física maior de 18 anos crie sua conta no ReMed, c
 | `perfil_solicitante` | Boolean | Sim | Padrão `False`. |
 | `perfil_cuidador` | Boolean | Sim | Padrão `False` (corresponde a `Cuidador/Familiar`). |
 | `status` | TextChoices | Sim | Valores: `ativo`, `inativo`, `suspenso`, `bloqueado`. Padrão: `ativo`. |
-| `is_staff` / `is_superuser` / `is_active` | Boolean | Sim | Compatibilidade com Django (`is_superuser` restrito ao bootstrap por terminal — [ADR 0010](../adr/0010-perfis-e-permissoes.md)). |
+| `is_staff` / `is_superuser` / `is_active` | Boolean | Sim | Compatibilidade com Django (`is_superuser` restrito ao bootstrap por terminal — [ADR 0010](../adr/0010-perfis-e-permissoes.md)). A sincronização `is_active = (status == "ativo" and anonimizado_em is None)` ocorre **exclusivamente na camada de service** (nunca em `save()` — ADR 0001). |
 | `criado_em` | Datetime | Sim | Preenchido automaticamente (cobre `Data do cadastro`). |
 | `atualizado_em` | Datetime | Sim | Atualizado automaticamente. |
 | `anonimizado_em` | Datetime, anulável | Não | Nulo enquanto a conta existir; preenchido no encerramento LGPD. |
 
 **Constraints obrigatórias no PostgreSQL (`Usuario`):**
 - `UniqueConstraint` parcial em `cpf` onde `cpf IS NOT NULL`;
-- `UniqueConstraint` em `email` (com `unique=True, null=True` + normalização em minúsculas no service/model, ou `UniqueConstraint` parcial em `Lower("email")` com `SILENCED_SYSTEM_CHECKS = ["auth.W004"]` — [ADR 0007](../adr/0007-modelo-de-usuario-customizado.md));
-- `CheckConstraint` garantindo que, quando `anonimizado_em IS NULL`, `email IS NOT NULL` e `cpf IS NOT NULL` (e quando `anonimizado_em IS NOT NULL`, `email IS NULL` e `cpf IS NULL`);
-- `CheckConstraint` garantindo que, quando `anonimizado_em IS NULL`, ao menos um perfil (`perfil_doador`, `perfil_solicitante` ou `perfil_cuidador`) é `True` (salvo eventual conta administrativa criada via bootstrap de terminal — a observar no `createsuperuser`).
+- `CheckConstraint` garantindo que, quando `cpf IS NOT NULL`, o valor contenha exatamente **11 dígitos numéricos** (`cpf ~ '^[0-9]{11}$'`);
+- `UniqueConstraint` em `email` (com `unique=True, null=True` + `UniqueConstraint` parcial em `Lower("email")` — [ADR 0007](../adr/0007-modelo-de-usuario-customizado.md));
+- `CheckConstraint` garantindo que, quando `anonimizado_em IS NULL`, `email IS NOT NULL` e `cpf IS NOT NULL` (e quando `anonimizado_em IS NOT NULL`, `email IS NULL` e `cpf IS NULL`) — inclusive para o comando `bootstrap_admin` (Etapa 3), que coleta um CPF válido;
+- `CheckConstraint` garantindo que, quando `anonimizado_em IS NULL` e `is_superuser = False`, ao menos um perfil (`perfil_doador`, `perfil_solicitante` ou `perfil_cuidador`) é `True`.
 
 #### `EnderecoUsuario` (app `contas`, relação `OneToOne` com `Usuario`)
 

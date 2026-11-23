@@ -67,5 +67,9 @@ Em caso de conflito, prevalece sempre a ordem:
 
 ## 6. Estado atual
 
-- **Concluído:** PRD, 20 ADRs aceitas, `docs/arquitetura.md`, 23 specs aprovadas (`01`–`23`) e **Etapa 0** (base `core/`, `.env.example`, `pyproject.toml`, `requirements-dev.txt`, Bootstrap `5.3.9` local, `templates/base.html`, `static/css/remed.css`, `.github/workflows/ci.yml` e conexão verificada com PostgreSQL `18.4`).
-- **Próxima etapa:** **Etapa 1** — base transversal (`nucleo`, `auditoria`, `contas` base com `AUTH_USER_MODEL = "contas.Usuario"`, `notificacoes` outbox mínimo, triggers `BEFORE UPDATE OR DELETE` no PostgreSQL e `argon2-cffi`).
+- **Concluído:**
+  - PRD, 20 ADRs aceitas (`0001`–`0020`), `docs/arquitetura.md` e 23 specs aprovadas (`01`–`23`).
+  - **Etapa 0:** base `core/`, `.env.example`, `pyproject.toml`, `requirements-dev.txt`, Bootstrap `5.3.9` local, `templates/base.html`, `static/css/remed.css`, `.github/workflows/ci.yml` e conexão verificada com PostgreSQL `18.4`.
+  - **Etapa 1:** base transversal (`nucleo`, `auditoria`, `contas` base com `AUTH_USER_MODEL = "contas.Usuario"`, 8 grupos administrativos, `notificacoes` outbox mínimo, trigger `BEFORE UPDATE OR DELETE` em `auditoria` no PostgreSQL e `argon2-cffi`).
+  - **Etapa 2 (Spec 01 — RF001, Cadastro de Usuário):** `nucleo` (`validators.py`, `rate_limit.py`, `CepService` BrasilAPI + ViaCEP com cache, `mixins.py` e `CepConsultarView`), `contas` (`exceptions.py`, `UsuarioService`, `forms.py`, CBVs em `views.py`, `urls.py`), `notificacoes` (comando `manage.py despachar_emails` com advisory lock e `ExecucaoRotina`), templates acessíveis (cadastro fiel ao protótipo com modais rascunho `1.0-rascunho`, confirmação de e-mail, reenvio sob limite 5/h, edição de perfil com CPF somente leitura e encerramento LGPD com ganchos no-op para etapas futuras), `static/js/cadastro.js` e suíte de testes automatizados em PostgreSQL cobrindo `CA-01-01` a `CA-01-18`.
+- **Próxima etapa:** **Etapa 3 (Spec 02 — RF002, Autenticação, Controle de Acesso e 2FA do Administrador)** — login por e-mail ou CPF, `RegistroAcesso` `append-only` com bloqueio de 15 min após 5 falhas, `SessaoUsuario`, 2FA TOTP (`pyotp` + `segno`), mixins completos de perfil/função administrativa e comando de bootstrap do primeiro Administrador.

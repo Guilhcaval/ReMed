@@ -68,7 +68,14 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "nucleo",
+    "contas",
+    "auditoria",
+    "notificacoes",
 ]
+
+AUTH_USER_MODEL = "contas.Usuario"
+LOGIN_URL = "/contas/entrar/"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -113,7 +120,13 @@ DATABASES = {
     }
 }
 
-# Validação de senhas (Argon2PasswordHasher entra na Etapa 1 com argon2-cffi — ADR 0008)
+# Hash de senha Argon2id com parâmetros padrão do Django 6.1.3 (ADR 0008 / RS005)
+PASSWORD_HASHERS = [
+    "django.contrib.auth.hashers.Argon2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+]
+
+# Validação de senhas (RF001 / RS005)
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
@@ -201,6 +214,11 @@ REMED_AGENDAMENTO_LIMITE_ALTERACAO_HORAS = _obter_int("REMED_AGENDAMENTO_LIMITE_
 REMED_ARQUIVO_TAMANHO_MAX_BYTES = _obter_int("REMED_ARQUIVO_TAMANHO_MAX_BYTES", 5 * 1024 * 1024)
 REMED_ARQUIVO_URL_TEMPORARIA_SEGUNDOS = _obter_int("REMED_ARQUIVO_URL_TEMPORARIA_SEGUNDOS", 60)
 REMED_CEP_CACHE_TTL_DIAS = _obter_int("REMED_CEP_CACHE_TTL_DIAS", 30)
+# Acréscimo da especificação (Spec 01 / ADR 0018): limites configuráveis de taxa e timeout do CEP
+REMED_CADASTRO_LIMITE_IP_HORA = _obter_int("REMED_CADASTRO_LIMITE_IP_HORA", 5)
+REMED_CEP_RATE_LIMIT_IP_MINUTO = _obter_int("REMED_CEP_RATE_LIMIT_IP_MINUTO", 30)
+REMED_CEP_TIMEOUT_SEGUNDOS = _obter_int("REMED_CEP_TIMEOUT_SEGUNDOS", 3)
+REMED_CEP_USER_AGENT = _obter_env("REMED_CEP_USER_AGENT", "ReMed/1.0 (+https://remed.local)")
 
 # Logging estruturado sem exposição de segredos ou dados pessoais
 LOGGING = {

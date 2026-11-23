@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Confirmação de e-mail · ReMed{% endblock %}
+
+{% block content %}
+  <div class="remed-auth-wrapper-sm">
+    <section class="remed-card p-4 p-md-5 shadow-sm text-center" aria-labelledby="titulo-confirmacao">
+      {% if confirmado %}
+        <h1 id="titulo-confirmacao" class="h4 fw-bold text-success mb-3">
+          E-mail confirmado com sucesso
+        </h1>
+        <p class="mb-4">
+          {% if tipo_confirmacao == "alteracao_email" %}
+            Seu novo endereço de e-mail foi confirmado e já está ativo na sua conta ReMed.
+          {% else %}
+            Sua conta ReMed foi confirmada e já está liberada para acesso.
+          {% endif %}
+        </p>
+        <div class="d-grid gap-2">
+          <a href="/contas/entrar/" class="btn btn-primary fw-semibold">Ir para entrar</a>
+          <a href="{% url 'contas:cadastro' %}" class="btn btn-outline-secondary">
+            Voltar ao cadastro
+          </a>
+        </div>
+      {% else %}
+        <h1 id="titulo-confirmacao" class="h4 fw-bold text-danger mb-3">
+          Não foi possível confirmar o e-mail
+        </h1>
+        <p class="mb-4">{{ mensagem_erro }}</p>
+        <div class="d-grid gap-2">
+          <a href="{% url 'contas:reenviar_confirmacao' %}" class="btn btn-primary fw-semibold">
+            Solicitar novo link de confirmação
+          </a>
+          <a href="{% url 'contas:cadastro' %}" class="btn btn-outline-secondary">
+            Voltar ao cadastro
+          </a>
+        </div>
+      {% endif %}
+    </section>
+  </div>
+{% endblock %}
