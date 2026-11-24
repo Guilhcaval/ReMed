@@ -28,8 +28,9 @@ Requisitos: [PRD](../prd/01-remed.md) e [catálogo](../prd/02-catalogo-requisito
 | [0018](0018-consulta-de-cep.md) | Consulta de CEP via proxy no servidor com cache no PostgreSQL (BrasilAPI + ViaCEP, `urllib.request`) | aceita | RF001, RF005, RF015, RNF12, RNF04, RS002, RS005 |
 | [0019](0019-hospedagem-implantacao-e-backup.md) | Hospedagem, implantação, CI/CD e backup (PaaS Docker, `gunicorn` + `whitenoise`, GitHub Actions, homologação agora / produção pós-RNF11) | aceita | RNF05, RNF08, RNF04, RNF11, RNF15, RS005, RS014 |
 | [0020](0020-configuracao-variaveis-ambiente-python-dotenv.md) | Configuração por variáveis de ambiente com `python-dotenv` e `.env.example` | aceita | RS005, RNF09, RNF08 |
+| [0021](0021-provedor-ia-multimodal-leitura-embalagem.md) | Integração da leitura da embalagem por IA multimodal via protocolo interno e `urllib.request` (`gemini` e `openai_compat`, sem novas dependências) | aceita | RF009, RNF04, RNF10, RNF12, RNF13, RS009, RS013 |
 
-Todas as ADRs necessárias para o MVP e a v1.1 (0001 a 0020) estão `aceita`. Restam como candidatas apenas as decisões da v2.0 abaixo.
+Todas as ADRs necessárias para o MVP, a v1.1 e o RF009 (0001 a 0021) estão `aceita`. Resta como candidata apenas a decisão da v2.0 abaixo.
 
 ## Candidatas (ainda sem ADR)
 
@@ -38,4 +39,3 @@ Uma decisão candidata só pode ser implementada depois de ter uma ADR `aceita`.
 | # | Tema | Requisitos | Por que decidir | Quando |
 | --- | --- | --- | --- | --- |
 | 1 | API REST | RNF09 | O RNF09 pede uma API e a ADR 0001 escolheu renderização no servidor | v2.0 |
-| 2 | Provedor de IA multimodal para a leitura da embalagem | RF009, RNF04, RNF10, RNF12 | Envio de imagem a terceiro, LGPD, resposta em até 15 segundos | v2.0 |

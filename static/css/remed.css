@@ -526,6 +526,69 @@ textarea:focus-visible {
   font-weight: 600;
 }
 
+.remed-home-wrapper {
+  max-width: 72rem;
+  margin-inline: auto;
+}
+
+.remed-home-emblem {
+  display: block;
+  width: auto;
+  height: 2.125rem;
+  object-fit: contain;
+}
+
+.remed-home-lead {
+  color: var(--remed-muted);
+  max-width: 65ch;
+}
+
+.remed-home-metrics {
+  background-color: var(--remed-surface);
+  border: 1px solid var(--remed-border);
+  border-radius: 0.75rem;
+}
+
+.remed-metric-tile {
+  background-color: var(--remed-surface-card);
+  border: 1px solid var(--remed-border);
+  border-radius: 0.5rem;
+}
+
+.remed-metric-accent {
+  color: var(--remed-accent);
+}
+
+.remed-ia-box {
+  background-color: var(--remed-surface);
+  border: 1px solid var(--remed-border);
+  border-radius: 0.625rem;
+}
+
+.remed-badge-ia-sugestao {
+  background-color: #e8f1fb;
+  color: #143f6b;
+  border: 1px solid #bdd4ee;
+  font-weight: 600;
+}
+
+.remed-badge-ia-baixa {
+  background-color: #fff4e5;
+  color: #7c3e00;
+  border: 1px solid #f2cf9b;
+  font-weight: 600;
+}
+
+.remed-campo-ia-sugerido {
+  border-color: #6ea8dc;
+  background-color: #f8fbff;
+}
+
+.remed-campo-ia-baixa {
+  border-color: #c97a00;
+  background-color: #fffaf2;
+}
+
 @media (max-width: 575.98px) {
   .remed-auth-logo {
     height: 3.75rem;

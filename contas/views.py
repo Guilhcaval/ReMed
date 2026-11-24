@@ -92,7 +92,7 @@ def _resolver_destino_seguro(request, candidato: str | None) -> str:
         require_https=request.is_secure(),
     ):
         return candidato
-    return settings.LOGIN_REDIRECT_URL
+    return reverse("nucleo:home")
 
 
 def _eh_destino_cadastro_ponto_coleta(request, candidato: str | None) -> bool:

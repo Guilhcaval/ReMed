@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}ReMed — Doação responsável de medicamentos{% endblock %}
+
+{% block content %}
+  <div class="remed-home-wrapper">
+    <section class="remed-card remed-home-hero p-4 p-md-5 shadow-sm mb-4" aria-labelledby="titulo-home">
+      <div class="row align-items-center g-4">
+        <div class="col-12 col-lg-8">
+          <div class="d-inline-flex align-items-center gap-2 mb-3">
+            <img
+              src="{% static 'img/logo.png' %}"
+              alt=""
+              width="32"
+              height="34"
+              class="remed-home-emblem"
+              decoding="async"
+            >
+            <span class="badge rounded-pill remed-badge-accent-soft px-3 py-2">
+              Doação responsável e gratuita
+            </span>
+          </div>
+          <h1 id="titulo-home" class="h2 fw-bold remed-auth-title mb-3">
+            Conectando medicamentos dentro da validade a quem precisa, com segurança sanitária e privacidade
+          </h1>
+          <p class="remed-home-lead mb-4">
+            O ReMed aproxima doadores, solicitantes, cuidadores e pontos de coleta aprovados.
+            Toda doação passa por conferência de validade e embalagem, sem expor seus dados pessoais.
+          </p>
+
+          <form
+            method="get"
+            action="{% url 'medicamentos:busca' %}"
+            class="remed-home-search mb-4"
+            role="search"
+            aria-label="Busca rápida de medicamentos disponíveis"
+          >
+            <label for="id_busca_rapida_termo" class="form-label fw-semibold">
+              Buscar medicamento disponível
+            </label>
+            <div class="row g-2">
+              <div class="col-12 col-sm-8">
+                <input
+                  type="search"
+                  id="id_busca_rapida_termo"
+                  name="termo"
+                  class="form-control"
+                  placeholder="Digite o nome ou princípio ativo (ex.: Losartana, Dipirona)"
+                  autocomplete="off"
+                >
+              </div>
+              <div class="col-12 col-sm-4 d-grid">
+                <button type="submit" class="btn btn-primary fw-semibold">
+                  Buscar medicamentos
+                </button>
+              </div>
+            </div>
+          </form>
+
+          <div class="d-flex flex-wrap gap-2">
+            {% if nav_autenticado %}
+              {% if nav_exibir_minhas_doacoes %}
+                <a href="{% url 'medicamentos:doacao_criar' %}" class="btn remed-btn-accent fw-semibold d-inline-flex align-items-center px-4">
+                  Cadastrar doação
+                </a>
+                <a href="{% url 'medicamentos:minhas_doacoes' %}" class="btn btn-outline-primary fw-semibold d-inline-flex align-items-center px-3">
+                  Minhas doações
+                </a>
+              {% endif %}
+              <a href="{% url 'medicamentos:busca' %}" class="btn btn-outline-secondary d-inline-flex align-items-center px-3">
+                Explorar busca completa
+              </a>
+              <a href="{% url 'pontos_coleta:lista_publica' %}" class="btn btn-outline-secondary d-inline-flex align-items-center px-3">
+                Pontos de coleta
+              </a>
+            {% else %}
+              <a href="{% url 'contas:cadastro' %}" class="btn remed-btn-accent fw-semibold d-inline-flex align-items-center px-4">
+                Criar conta gratuita
+              </a>
+              <a href="{% url 'contas:login' %}" class="btn btn-outline-primary fw-semibold d-inline-flex align-items-center px-3">
+                Entrar
+              </a>
+              <a href="{% url 'pontos_coleta:lista_publica' %}" class="btn btn-outline-secondary d-inline-flex align-items-center px-3">
+                Ver pontos de coleta
+              </a>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="col-12 col-lg-4">
+          <div class="remed-home-metrics p-3 p-md-4" aria-label="Resumo público da plataforma">
+            <h2 class="h6 fw-bold remed-auth-title mb-3">Panorama atual da rede</h2>
+            <dl class="row g-3 mb-0">
+              <div class="col-6 col-lg-12">
+                <div class="remed-metric-tile p-3">
+                  <dt class="small text-secondary fw-medium mb-1">Doações disponíveis</dt>
+                  <dd class="h3 fw-bold remed-auth-title mb-0">{{ resumo_publico.doacoes_disponiveis }}</dd>
+                </div>
+              </div>
+              <div class="col-6 col-lg-12">
+                <div class="remed-metric-tile p-3">
+                  <dt class="small text-secondary fw-medium mb-1">Pontos de coleta ativos</dt>
+                  <dd class="h3 fw-bold remed-metric-accent mb-0">{{ resumo_publico.pontos_coleta_ativos }}</dd>
+                </div>
+              </div>
+            </dl>
+            <p class="remed-hint mt-3 mb-0">
+              Indicadores públicos agregados e anônimos, atualizados automaticamente.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="remed-banner-info p-3 mb-4 d-flex align-items-start gap-2" role="note">
+      <span class="remed-info-icon" aria-hidden="true">i</span>
+      <p class="mb-0 small">
+        <strong>Aviso importante:</strong> {{ aviso_rnf13 }}
+        Medicamentos vencidos, com embalagem violada ou de controle especial (Portaria SVS/MS nº 344/1998) não são aceitos na plataforma.
+      </p>
+    </div>
+
+    <section class="mb-4" aria-labelledby="titulo-como-funciona">
+      <div class="mb-3">
+        <h2 id="titulo-como-funciona" class="h4 fw-bold remed-auth-title mb-1">
+          Como funciona o ReMed
+        </h2>
+        <p class="remed-hint mb-0">
+          Um fluxo simples, rastreável e pensado para proteger a saúde e a privacidade de todos os participantes.
+        </p>
+      </div>
+
+      <ol class="row g-3 list-unstyled mb-0">
+        <li class="col-12 col-md-6 col-lg-3">
+          <article class="remed-card p-3 p-md-4 h-100">
+            <span class="badge rounded-pill remed-badge-unread mb-2">Passo 1</span>
+            <h3 class="h6 fw-bold mb-2">Cadastro e conferência</h3>
+            <p class="small text-secondary mb-0">
+              O doador cadastra o medicamento com foto da embalagem e validade. Toda doação nasce em análise e só fica disponível após conferência.
+            </p>
+          </article>
+        </li>
+        <li class="col-12 col-md-6 col-lg-3">
+          <article class="remed-card p-3 p-md-4 h-100">
+            <span class="badge rounded-pill remed-badge-unread mb-2">Passo 2</span>
+            <h3 class="h6 fw-bold mb-2">Busca por proximidade</h3>
+            <p class="small text-secondary mb-0">
+              Visitantes e usuários consultam medicamentos disponíveis por nome, princípio ativo, conservação e região aproximada, sem ver dados do doador.
+            </p>
+          </article>
+        </li>
+        <li class="col-12 col-md-6 col-lg-3">
+          <article class="remed-card p-3 p-md-4 h-100">
+            <span class="badge rounded-pill remed-badge-unread mb-2">Passo 3</span>
+            <h3 class="h6 fw-bold mb-2">Pontos de coleta aprovados</h3>
+            <p class="small text-secondary mb-0">
+              Farmácias, UBS, clínicas e ONGs com documentação conferida servem como locais seguros de encontro para a retirada presencial.
+            </p>
+          </article>
+        </li>
+        <li class="col-12 col-md-6 col-lg-3">
+          <article class="remed-card p-3 p-md-4 h-100">
+            <span class="badge rounded-pill remed-badge-unread mb-2">Passo 4</span>
+            <h3 class="h6 fw-bold mb-2">Monitoramento de validade</h3>
+            <p class="small text-secondary mb-0">
+              Uma rotina diária remove automaticamente medicamentos vencidos ou abaixo do prazo mínimo e orienta o descarte sanitário adequado.
+            </p>
+          </article>
+        </li>
+      </ol>
+    </section>
+
+    <section class="row g-3" aria-labelledby="titulo-seguranca-parceria">
+      <div class="col-12 col-lg-7">
+        <div class="remed-card p-4 h-100">
+          <h2 id="titulo-seguranca-parceria" class="h5 fw-bold remed-auth-title mb-3">
+            Compromissos de segurança sanitária e LGPD
+          </h2>
+          <ul class="small text-secondary mb-0 ps-3 d-grid gap-2">
+            <li>
+              <strong class="text-body">Privacidade desde o desenho:</strong> nunca coletamos o motivo da necessidade de saúde e nunca exibimos endereço, telefone ou e-mail pessoal na busca.
+            </li>
+            <li>
+              <strong class="text-body">Controle de integridade:</strong> apenas embalagens íntegras e dentro da validade mínima são aceitas; medicamentos refrigerados exigem declaração de conservação.
+            </li>
+            <li>
+              <strong class="text-body">Acesso transparente:</strong> consultas públicas são abertas a visitantes; doações, conferências e gestão contam com histórico imutável de auditoria.
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="col-12 col-lg-5">
+        <div class="remed-card p-4 h-100 d-flex flex-column justify-content-between">
+          <div>
+            <h2 class="h5 fw-bold remed-auth-title mb-2">
+              Representa uma instituição?
+            </h2>
+            <p class="small text-secondary mb-3">
+              Farmácias, postos de saúde, hospitais, clínicas e ONGs podem se cadastrar como ponto de coleta para apoiar retiradas presenciais seguras na comunidade.
+            </p>
+          </div>
+          <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'pontos_coleta:cadastrar' %}" class="btn btn-outline-primary fw-semibold d-inline-flex align-items-center px-3">
+              Cadastrar ponto de coleta
+            </a>
+            <a href="{% url 'pontos_coleta:lista_publica' %}" class="btn btn-outline-secondary d-inline-flex align-items-center px-3">
+              Consultar pontos ativos
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+{% endblock %}

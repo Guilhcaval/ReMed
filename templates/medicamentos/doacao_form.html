@@ -53,6 +53,110 @@
         novalidate
       >
         {% csrf_token %}
+        {% if not modo_edicao %}
+          {{ form.ia_sugestao_utilizada }}
+          {{ form.ia_validade_sugerida }}
+          {{ form.ia_campos_baixa_confianca }}
+        {% endif %}
+
+        <fieldset class="mb-4">
+          <legend class="remed-section-title mb-1">Fotos da embalagem</legend>
+          <p class="remed-hint mb-3">
+            Envie de 1 a 2 fotos em <strong>JPG ou PNG (máximo 5 MB cada)</strong> mostrando frente, validade e lote.
+            Por privacidade (LGPD), <strong>não fotografe etiquetas com nome ou dados pessoais de pacientes</strong>.
+          </p>
+
+          {% if modo_edicao and fotos_existentes %}
+            <div class="remed-banner-neutral p-3 mb-3 small">
+              <strong class="d-block mb-1">Fotos atuais vinculadas:</strong>
+              <ul class="mb-0 ps-3">
+                {% for foto in fotos_existentes %}
+                  <li>
+                    <a href="{% url 'medicamentos:doacao_foto_acessar' foto_id=foto.pk %}">
+                      Abrir foto {{ foto.ordem }} (link temporário 60 s)
+                    </a>
+                  </li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+
+          <div class="mb-3">
+            <label for="{{ form.foto_1.id_for_label }}" class="form-label fw-medium">
+              {{ form.foto_1.label }}{% if not modo_edicao %} <span class="remed-required-mark" aria-hidden="true">*</span>{% endif %}
+            </label>
+            {{ form.foto_1 }}
+            {% if form.foto_1.errors %}
+              <div class="invalid-feedback d-block">{% for e in form.foto_1.errors %}{{ e }}{% endfor %}</div>
+            {% endif %}
+          </div>
+
+          <div class="mb-3">
+            <label for="{{ form.foto_2.id_for_label }}" class="form-label fw-medium">
+              {{ form.foto_2.label }}
+            </label>
+            {{ form.foto_2 }}
+            {% if form.foto_2.errors %}
+              <div class="invalid-feedback d-block">{% for e in form.foto_2.errors %}{{ e }}{% endfor %}</div>
+            {% endif %}
+          </div>
+
+          {% if not modo_edicao %}
+            <div
+              id="painel-leitura-ia"
+              class="remed-ia-box p-3 mt-3"
+              data-url-ia="{% url 'medicamentos:doacao_ler_ia' %}"
+            >
+              <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                <h2 class="h6 fw-bold remed-auth-title mb-0">
+                  Preenchimento assistido por IA (opcional)
+                </h2>
+                <span class="badge rounded-pill remed-badge-ia-sugestao">
+                  A IA apenas sugere
+                </span>
+              </div>
+              <p class="small text-secondary mb-2">
+                {{ aviso_lgpd_ia }}
+              </p>
+              <p class="remed-hint mb-3">
+                Reutiliza automaticamente a <strong>Foto 1</strong> selecionada acima, já limpa de metadados EXIF/GPS antes do envio.
+                Você pode preencher tudo manualmente a qualquer momento.
+              </p>
+
+              <div class="form-check d-flex align-items-start gap-2 mb-3">
+                <input
+                  type="checkbox"
+                  id="id_consentimento_ia"
+                  class="form-check-input remed-terms-check"
+                  value="sim"
+                >
+                <label class="form-check-label small" for="id_consentimento_ia">
+                  Estou ciente de que a Foto 1 da embalagem será enviada a um serviço externo de IA apenas para sugerir o preenchimento dos campos.
+                </label>
+              </div>
+
+              <div class="d-flex flex-wrap align-items-center gap-2">
+                <button
+                  type="button"
+                  id="btn-ler-embalagem-ia"
+                  class="btn btn-outline-primary fw-semibold px-3"
+                  disabled
+                >
+                  Ler dados da foto com IA
+                </button>
+                {% if not ia_configurada %}
+                  <span class="remed-hint">
+                    Modo demonstração/fallback: sem chave de IA configurada neste ambiente, o preenchimento manual segue disponível normalmente.
+                  </span>
+                {% endif %}
+              </div>
+
+              <div id="ia-status-mensagem" class="d-none" role="status" aria-live="polite"></div>
+            </div>
+          {% endif %}
+        </fieldset>
+
+        <hr class="remed-section-divider my-4">
 
         <fieldset class="mb-4">
           <legend class="remed-section-title mb-1">Identificação do medicamento</legend>
@@ -63,6 +167,7 @@
               {{ form.nome_medicamento.label }} <span class="remed-required-mark" aria-hidden="true">*</span>
             </label>
             {{ form.nome_medicamento }}
+            <div id="badge-ia-nome_medicamento" class="mt-1 d-none" aria-live="polite"></div>
             {% if form.nome_medicamento.errors %}
               <div class="invalid-feedback d-block">{% for e in form.nome_medicamento.errors %}{{ e }}{% endfor %}</div>
             {% endif %}
@@ -74,6 +179,7 @@
                 {{ form.principio_ativo.label }} <span class="remed-required-mark" aria-hidden="true">*</span>
               </label>
               {{ form.principio_ativo }}
+              <div id="badge-ia-principio_ativo" class="mt-1 d-none" aria-live="polite"></div>
               {% if form.principio_ativo.errors %}
                 <div class="invalid-feedback d-block">{% for e in form.principio_ativo.errors %}{{ e }}{% endfor %}</div>
               {% endif %}
@@ -83,6 +189,7 @@
                 {{ form.concentracao_dosagem.label }} <span class="remed-required-mark" aria-hidden="true">*</span>
               </label>
               {{ form.concentracao_dosagem }}
+              <div id="badge-ia-concentracao_dosagem" class="mt-1 d-none" aria-live="polite"></div>
               {% if form.concentracao_dosagem.errors %}
                 <div class="invalid-feedback d-block">{% for e in form.concentracao_dosagem.errors %}{{ e }}{% endfor %}</div>
               {% endif %}
@@ -116,6 +223,7 @@
                 {{ form.fabricante.label }} <span class="remed-required-mark" aria-hidden="true">*</span>
               </label>
               {{ form.fabricante }}
+              <div id="badge-ia-fabricante" class="mt-1 d-none" aria-live="polite"></div>
               {% if form.fabricante.errors %}
                 <div class="invalid-feedback d-block">{% for e in form.fabricante.errors %}{{ e }}{% endfor %}</div>
               {% endif %}
@@ -125,6 +233,7 @@
                 {{ form.lote.label }} <span class="remed-required-mark" aria-hidden="true">*</span>
               </label>
               {{ form.lote }}
+              <div id="badge-ia-lote" class="mt-1 d-none" aria-live="polite"></div>
               {% if form.lote.errors %}
                 <div class="invalid-feedback d-block">{% for e in form.lote.errors %}{{ e }}{% endfor %}</div>
               {% endif %}
@@ -134,12 +243,52 @@
                 {{ form.data_validade.label }} <span class="remed-required-mark" aria-hidden="true">*</span>
               </label>
               {{ form.data_validade }}
+              <div id="badge-ia-data_validade" class="mt-1 d-none" aria-live="polite"></div>
               <div class="remed-hint mt-1">Validade mínima restante: {{ validade_minima_dias }} dias.</div>
               {% if form.data_validade.errors %}
                 <div class="invalid-feedback d-block">{% for e in form.data_validade.errors %}{{ e }}{% endfor %}</div>
               {% endif %}
             </div>
           </div>
+
+          {% if not modo_edicao %}
+            <div
+              id="bloco-confirmacoes-ia"
+              class="remed-ia-box p-3 mt-3{% if not form.confirmar_validade_ia.errors and not form.confirmar_baixa_confianca_ia.errors %} d-none{% endif %}"
+              role="region"
+              aria-label="Confirmação manual das sugestões da IA"
+            >
+              <p class="small fw-semibold mb-2">
+                Confirmação obrigatória antes de salvar (RF009 / RS009):
+              </p>
+
+              <div
+                id="grupo-confirmar-validade-ia"
+                class="form-check d-flex align-items-start gap-2 mb-2{% if not form.confirmar_validade_ia.errors %} d-none{% endif %}"
+              >
+                {{ form.confirmar_validade_ia }}
+                <label class="form-check-label small" for="{{ form.confirmar_validade_ia.id_for_label }}">
+                  {{ form.confirmar_validade_ia.label }}
+                </label>
+              </div>
+              {% if form.confirmar_validade_ia.errors %}
+                <div class="invalid-feedback d-block mb-2">{% for e in form.confirmar_validade_ia.errors %}{{ e }}{% endfor %}</div>
+              {% endif %}
+
+              <div
+                id="grupo-confirmar-baixa-ia"
+                class="form-check d-flex align-items-start gap-2{% if not form.confirmar_baixa_confianca_ia.errors %} d-none{% endif %}"
+              >
+                {{ form.confirmar_baixa_confianca_ia }}
+                <label class="form-check-label small" for="{{ form.confirmar_baixa_confianca_ia.id_for_label }}">
+                  {{ form.confirmar_baixa_confianca_ia.label }}
+                </label>
+              </div>
+              {% if form.confirmar_baixa_confianca_ia.errors %}
+                <div class="invalid-feedback d-block mt-1">{% for e in form.confirmar_baixa_confianca_ia.errors %}{{ e }}{% endfor %}</div>
+              {% endif %}
+            </div>
+          {% endif %}
         </fieldset>
 
         <hr class="remed-section-divider my-4">
@@ -219,51 +368,6 @@
                 {{ form.declaracao_doador_conservacao.label }}
               </label>
             </div>
-          </div>
-        </fieldset>
-
-        <hr class="remed-section-divider my-4">
-
-        <fieldset class="mb-4">
-          <legend class="remed-section-title mb-1">Fotos da embalagem</legend>
-          <p class="remed-hint mb-3">
-            Envie de 1 a 2 fotos em <strong>JPG ou PNG (máximo 5 MB cada)</strong> mostrando frente, validade e lote.
-            Por privacidade (LGPD), <strong>não fotografe etiquetas com nome ou dados pessoais de pacientes</strong>.
-          </p>
-
-          {% if modo_edicao and fotos_existentes %}
-            <div class="remed-banner-neutral p-3 mb-3 small">
-              <strong class="d-block mb-1">Fotos atuais vinculadas:</strong>
-              <ul class="mb-0 ps-3">
-                {% for foto in fotos_existentes %}
-                  <li>
-                    <a href="{% url 'medicamentos:doacao_foto_acessar' foto_id=foto.pk %}">
-                      Abrir foto {{ foto.ordem }} (link temporário 60 s)
-                    </a>
-                  </li>
-                {% endfor %}
-              </ul>
-            </div>
-          {% endif %}
-
-          <div class="mb-3">
-            <label for="{{ form.foto_1.id_for_label }}" class="form-label fw-medium">
-              {{ form.foto_1.label }}{% if not modo_edicao %} <span class="remed-required-mark" aria-hidden="true">*</span>{% endif %}
-            </label>
-            {{ form.foto_1 }}
-            {% if form.foto_1.errors %}
-              <div class="invalid-feedback d-block">{% for e in form.foto_1.errors %}{{ e }}{% endfor %}</div>
-            {% endif %}
-          </div>
-
-          <div class="mb-0">
-            <label for="{{ form.foto_2.id_for_label }}" class="form-label fw-medium">
-              {{ form.foto_2.label }}
-            </label>
-            {{ form.foto_2 }}
-            {% if form.foto_2.errors %}
-              <div class="invalid-feedback d-block">{% for e in form.foto_2.errors %}{{ e }}{% endfor %}</div>
-            {% endif %}
           </div>
         </fieldset>
 

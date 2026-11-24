@@ -65,6 +65,14 @@ class ArquivoPrivadoAberto:
     nome_download: str
 
 
+@dataclass(frozen=True)
+class ImagemSanitizada:
+    conteudo: bytes
+    mime_verificado: str
+    tamanho_bytes: int
+    extensao: str
+
+
 class AntimalwareScanner(Protocol):
     """Contrato de varredura antimalware antes da persistência (ADR 0016)."""
 
@@ -235,6 +243,58 @@ def _reprocessar_imagem_sem_exif(conteudo: bytes, extensao_esperada: str) -> byt
 
 class ArquivoService:
     """Serviço único de upload, validação, sanitização e acesso privado (ADR 0016)."""
+
+    @staticmethod
+    def validar_e_sanitizar_imagem(
+        *,
+        conteudo: bytes,
+        nome_original: str,
+        extensoes_permitidas: frozenset[str] = frozenset({"jpg", "jpeg", "png"}),
+        scanner: AntimalwareScanner | None = None,
+    ) -> ImagemSanitizada:
+        """Valida JPG/PNG (<= 5 MB), remove EXIF/GPS e roda antimalware sem gravar em disco."""
+        limite_bytes = settings.REMED_ARQUIVO_TAMANHO_MAX_BYTES
+        if not conteudo:
+            raise ArquivoFormatoInvalido()
+        if len(conteudo) > limite_bytes:
+            raise ErroTamanhoArquivo()
+
+        ext_declarada = _extrair_extensao(nome_original)
+        permitidas_norm = {e.lower() for e in extensoes_permitidas} & {"jpg", "jpeg", "png"}
+        if not ext_declarada or ext_declarada not in permitidas_norm:
+            raise ArquivoFormatoInvalido()
+
+        ext_detectada, mime_verificado = _detectar_tipo_por_magic_bytes(conteudo)
+        if ext_detectada not in {"jpg", "png"} or _MAPA_EXT_CANONICA.get(ext_declarada) != (
+            ext_detectada
+        ):
+            raise ArquivoFormatoInvalido()
+
+        conteudo_limpo = _reprocessar_imagem_sem_exif(conteudo, ext_detectada)
+        if len(conteudo_limpo) > limite_bytes:
+            raise ErroTamanhoArquivo()
+
+        nome_seguro = f"memoria/{uuid.uuid4().hex}.{ext_detectada}"
+        verificador = scanner if scanner is not None else NoopAntimalwareScanner()
+        try:
+            verificador.verificar(conteudo_limpo, nome_seguro=nome_seguro)
+        except ArquivoMalwareDetectado:
+            logger.warning("Imagem bloqueada por detecção de malware (chave=%s).", nome_seguro)
+            raise
+        except Exception as erro:
+            logger.warning(
+                "Falha no scanner antimalware em modo fail-closed (chave=%s): %s",
+                nome_seguro,
+                erro.__class__.__name__,
+            )
+            raise ArquivoScannerIndisponivel() from erro
+
+        return ImagemSanitizada(
+            conteudo=conteudo_limpo,
+            mime_verificado=mime_verificado,
+            tamanho_bytes=len(conteudo_limpo),
+            extensao=ext_detectada,
+        )
 
     @staticmethod
     def armazenar_privado(

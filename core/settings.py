@@ -49,6 +49,18 @@ def _obter_int(nome: str, padrao: int) -> int:
         ) from erro
 
 
+def _obter_float(nome: str, padrao: float) -> float:
+    valor = os.environ.get(nome)
+    if valor is None or valor == "":
+        return padrao
+    try:
+        return float(valor)
+    except ValueError as erro:
+        raise ImproperlyConfigured(
+            f"Variável de ambiente {nome} deve ser um número decimal."
+        ) from erro
+
+
 def _obter_lista(nome: str, padrao: list[str] | None = None) -> list[str]:
     valor = os.environ.get(nome)
     if valor is None or not valor.strip():
@@ -81,7 +93,7 @@ INSTALLED_APPS = [
 AUTH_USER_MODEL = "contas.Usuario"
 AUTHENTICATION_BACKENDS = ["contas.backends.EmailOuCpfBackend"]
 LOGIN_URL = "/contas/entrar/"
-LOGIN_REDIRECT_URL = "/contas/meu-perfil/"
+LOGIN_REDIRECT_URL = "/"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -263,6 +275,15 @@ REMED_RESERVA_EXPIRACAO_HORAS = _obter_int("REMED_RESERVA_EXPIRACAO_HORAS", 48)
 REMED_AGENDAMENTO_LIMITE_ALTERACAO_HORAS = _obter_int("REMED_AGENDAMENTO_LIMITE_ALTERACAO_HORAS", 2)
 REMED_ARQUIVO_TAMANHO_MAX_BYTES = _obter_int("REMED_ARQUIVO_TAMANHO_MAX_BYTES", 5 * 1024 * 1024)
 REMED_ARQUIVO_URL_TEMPORARIA_SEGUNDOS = _obter_int("REMED_ARQUIVO_URL_TEMPORARIA_SEGUNDOS", 60)
+# Leitura de embalagem por IA multimodal (RF009 / Spec 23 / ADR 0021)
+REMED_IA_PROVEDOR = _obter_env("REMED_IA_PROVEDOR", "").strip().lower()
+REMED_IA_API_KEY = _obter_env("REMED_IA_API_KEY", "").strip()
+REMED_IA_MODELO = _obter_env("REMED_IA_MODELO", "").strip()
+REMED_IA_ENDPOINT = _obter_env("REMED_IA_ENDPOINT", "").strip()
+REMED_IA_TIMEOUT_SEGUNDOS = _obter_int("REMED_IA_TIMEOUT_SEGUNDOS", 12)
+# Valor inicial provisório (Questão 9 do PRD — pendência externa configurável)
+REMED_IA_CONFIANCA_MINIMA = _obter_float("REMED_IA_CONFIANCA_MINIMA", 0.80)
+REMED_IA_LEITURAS_MAX_POR_HORA = _obter_int("REMED_IA_LEITURAS_MAX_POR_HORA", 10)
 REMED_CEP_CACHE_TTL_DIAS = _obter_int("REMED_CEP_CACHE_TTL_DIAS", 30)
 # Acréscimo da especificação (Spec 01 / ADR 0018): limites configuráveis de taxa e timeout do CEP
 REMED_CADASTRO_LIMITE_IP_HORA = _obter_int("REMED_CADASTRO_LIMITE_IP_HORA", 5)

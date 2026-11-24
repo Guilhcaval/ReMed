@@ -117,6 +117,7 @@ class DadosDoacao:
     observacoes: str = ""
     faixa_temperatura_bula: str = ""
     declaracao_doador_conservacao: bool = False
+    auxilio_ia: bool = False
 
 
 @dataclass(frozen=True)
@@ -998,6 +999,7 @@ class DoacaoService:
                         ),
                         "sujeito_receita": doacao.sujeito_receita,
                         "qtd_fotos": len(armazenadas),
+                        "auxilio_ia": bool(dados.auxilio_ia),
                         "status": doacao.status,
                     },
                 )

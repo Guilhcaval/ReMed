@@ -11,6 +11,7 @@ from nucleo.mixins import SESSAO_CHAVE_2FA_VERIFICADO
 from pontos_coleta.services import PontoColetaService
 
 MAPA_VIEW_SECAO: dict[str, str] = {
+    "nucleo:home": "home",
     "medicamentos:busca": "medicamentos_busca",
     "medicamentos:definir_localizacao": "medicamentos_busca",
     "medicamentos:limpar_localizacao": "medicamentos_busca",

@@ -191,12 +191,57 @@ class DoacaoCadastroForm(DoacaoBaseForm):
             attrs={"class": "form-control", "accept": ".jpg,.jpeg,.png,image/jpeg,image/png"}
         ),
     )
+    ia_sugestao_utilizada = forms.CharField(
+        required=False,
+        initial="nao",
+        widget=forms.HiddenInput(),
+    )
+    ia_validade_sugerida = forms.CharField(
+        required=False,
+        initial="nao",
+        widget=forms.HiddenInput(),
+    )
+    ia_campos_baixa_confianca = forms.CharField(
+        required=False,
+        initial="",
+        widget=forms.HiddenInput(),
+    )
+    confirmar_validade_ia = forms.BooleanField(
+        label="Confirmo que conferi a data de validade sugerida pela IA diretamente na embalagem.",
+        required=False,
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
+    confirmar_baixa_confianca_ia = forms.BooleanField(
+        label="Confirmo que revisei manualmente os campos destacados com baixa confiança da IA.",
+        required=False,
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
 
     def clean_foto_1(self):
         return _validar_arquivo_foto_formato(self.cleaned_data.get("foto_1"))
 
     def clean_foto_2(self):
         return _validar_arquivo_foto_formato(self.cleaned_data.get("foto_2"))
+
+    def clean(self):
+        cleaned = super().clean()
+        validade_sugerida = (cleaned.get("ia_validade_sugerida") or "").strip().lower() == "sim"
+        campos_baixa = [
+            c.strip()
+            for c in (cleaned.get("ia_campos_baixa_confianca") or "").split(",")
+            if c.strip()
+        ]
+        if validade_sugerida and not cleaned.get("confirmar_validade_ia"):
+            self.add_error(
+                "confirmar_validade_ia",
+                "Confirme explicitamente a data de validade sugerida pela IA antes de salvar.",
+            )
+        if campos_baixa and not cleaned.get("confirmar_baixa_confianca_ia"):
+            self.add_error(
+                "confirmar_baixa_confianca_ia",
+                "Revise e confirme os campos destacados com baixa confiança da IA antes de salvar.",
+            )
+        return cleaned
 
 
 class DoacaoEditarForm(DoacaoBaseForm):

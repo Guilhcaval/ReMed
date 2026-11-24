@@ -95,12 +95,35 @@ class AutenticacaoViewsEMixinsTest(TestCase):
                 "next": "https://externo.exemplo/roubo",
             },
         )
-        self.assertRedirects(resposta, settings.LOGIN_REDIRECT_URL)
+        self.assertEqual(settings.LOGIN_REDIRECT_URL, reverse("nucleo:home"))
+        self.assertRedirects(resposta, reverse("nucleo:home"))
         chave_depois = self.client.session.session_key
         self.assertNotEqual(chave_antes, chave_depois)
         self.assertTrue(
             SessaoUsuario.objects.filter(usuario=usuario, session_key=chave_depois).exists()
         )
+
+    def test_login_padrao_redireciona_para_home_e_preserva_next_interno_valido(self):
+        self._criar_usuario()
+        url_login = reverse("contas:login")
+
+        r_sem_next = self.client.post(
+            url_login,
+            data={"identificador": "cidadao@exemplo.com", "senha": "Rm3d!Senha1"},
+        )
+        self.assertRedirects(r_sem_next, reverse("nucleo:home"))
+
+        self.client.post(reverse("contas:logout"))
+        destino_interno = reverse("pontos_coleta:cadastrar")
+        r_com_next = self.client.post(
+            url_login,
+            data={
+                "identificador": "cidadao@exemplo.com",
+                "senha": "Rm3d!Senha1",
+                "next": destino_interno,
+            },
+        )
+        self.assertRedirects(r_com_next, destino_interno)
 
     def test_login_bloqueio_6a_tentativa_e_nao_confirmado_mostra_reenvio(self):
         self._criar_usuario(confirmado=False)
@@ -205,19 +228,46 @@ class AutenticacaoViewsEMixinsTest(TestCase):
         self.assertContains(r_cfg, "data:image/svg+xml")
 
         dispositivo = DispositivoTotp.objects.get(usuario=admin)
-        codigo = pyotp.TOTP(dispositivo.segredo).now()
+        agora = timezone.now()
+        codigo = pyotp.TOTP(dispositivo.segredo).at(agora)
         r_ativ = self.client.post(reverse("contas:totp_configurar"), data={"codigo": codigo})
         self.assertEqual(r_ativ.status_code, 200)
         self.assertContains(r_ativ, "Guarde seus 8 códigos de recuperação agora.")
+        self.assertEqual(r_ativ.context["destino_continuar"], reverse("nucleo:home"))
         self.assertIs(self.client.session[SESSAO_CHAVE_2FA_VERIFICADO], True)
+        codigo_recuperacao = r_ativ.context["codigos_recuperacao"][0]
 
-        # Novo login direciona para totp_verificar (já possui dispositivo ativo)
+        # Novo login sem ?next= direciona para totp_verificar e conclui indo para a Home (/)
         self.client.post(reverse("contas:logout"))
         r_login2 = self.client.post(
             reverse("contas:login"),
             data={"identificador": "admin@exemplo.com", "senha": "Rm3d!Senha1"},
         )
         self.assertRedirects(r_login2, reverse("contas:totp_verificar"))
+        codigo_seguinte = pyotp.TOTP(dispositivo.segredo).at(agora + timedelta(seconds=30))
+        r_verif = self.client.post(
+            reverse("contas:totp_verificar"),
+            data={"codigo": codigo_seguinte},
+        )
+        self.assertRedirects(r_verif, reverse("nucleo:home"))
+
+        # Novo login com ?next= interno válido preserva o destino após concluir o 2FA
+        self.client.post(reverse("contas:logout"))
+        destino_interno = reverse("pontos_coleta:cadastrar")
+        r_login3 = self.client.post(
+            reverse("contas:login"),
+            data={
+                "identificador": "admin@exemplo.com",
+                "senha": "Rm3d!Senha1",
+                "next": destino_interno,
+            },
+        )
+        self.assertRedirects(r_login3, reverse("contas:totp_verificar"))
+        r_verif_next = self.client.post(
+            reverse("contas:totp_verificar"),
+            data={"modo": "recuperacao", "codigo_recuperacao": codigo_recuperacao},
+        )
+        self.assertRedirects(r_verif_next, destino_interno)
 
     def test_matriz_permissoes_mixins_e_restricao_is_superuser(self):
         """CA-02-11: is_superuser sem função explícita recebe HTTP 403; 2FA obrigatório."""

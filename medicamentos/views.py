@@ -1,14 +1,16 @@
-"""Views baseadas em classe (CBVs) do app medicamentos (Specs 08, 09, 10, 11 e 14)."""
+"""Views baseadas em classe (CBVs) do app medicamentos (Specs 08, 09, 10, 11, 14 e 23)."""
 
 from decimal import Decimal, InvalidOperation
 
+from django.conf import settings
 from django.contrib import messages
-from django.http import Http404, HttpResponseForbidden
+from django.http import Http404, HttpResponseForbidden, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views import View
 
+from medicamentos.exceptions import ServicoIaIndisponivel
 from medicamentos.forms import (
     AdminConferenciaFiltroForm,
     ConferenciaDoacaoForm,
@@ -18,6 +20,10 @@ from medicamentos.forms import (
     MedicamentoBuscaForm,
     MinhasDoacoesFiltroForm,
     ParametroVencimentoForm,
+)
+from medicamentos.ia_embalagem import (
+    AVISO_LGPD_IA_EMBALAGEM,
+    LeituraEmbalagemIaService,
 )
 from medicamentos.models import CondicaoConservacao
 from medicamentos.services import (
@@ -36,6 +42,7 @@ from nucleo.exceptions import (
     CepInvalido,
     CepNaoEncontrado,
     ErroDominio,
+    LimiteTaxaExcedido,
     PermissaoNegada,
     RecursoNaoEncontrado,
     ServicoCepIndisponivel,
@@ -89,6 +96,7 @@ def _construir_dados_doacao(cleaned: dict) -> DadosDoacao:
         observacoes=cleaned.get("observacoes") or "",
         faixa_temperatura_bula=cleaned.get("faixa_temperatura_bula") or "",
         declaracao_doador_conservacao=bool(cleaned.get("declaracao_doador_conservacao")),
+        auxilio_ia=(cleaned.get("ia_sugestao_utilizada") or "").strip().lower() == "sim",
     )
 
 
@@ -255,6 +263,9 @@ class DoacaoCriarView(PerfilObrigatorioMixin, View):
             "modo_edicao": False,
             "validade_minima_dias": parametros.validade_minima_restante_dias,
             "aviso_rnf13": AVISO_RNF13,
+            "aviso_lgpd_ia": AVISO_LGPD_IA_EMBALAGEM,
+            "ia_configurada": LeituraEmbalagemIaService.ia_configurada(),
+            "confianca_minima_ia": settings.REMED_IA_CONFIANCA_MINIMA,
         }
 
     def get(self, request):
@@ -304,6 +315,57 @@ class DoacaoCriarView(PerfilObrigatorioMixin, View):
             f"Doação cadastrada com sucesso e enviada para conferência. {AVISO_RNF13}",
         )
         return redirect("medicamentos:minhas_doacoes")
+
+
+class DoacaoLerEmbalagemIaView(PerfilObrigatorioMixin, View):
+    """Endpoint JSON interno para sugestão assistida por IA da embalagem (Spec 23 / ADR 0021)."""
+
+    perfis_permitidos = ("doador",)
+
+    def post(self, request):
+        arquivo = request.FILES.get("foto")
+        if arquivo is None:
+            return JsonResponse(
+                {
+                    "sucesso": False,
+                    "erro": "Selecione primeiro a Foto 1 da embalagem em JPG ou PNG.",
+                    "fallback_manual": True,
+                },
+                status=400,
+            )
+
+        consentimento = (request.POST.get("consentimento_ia") or "").strip().lower() in {
+            "1",
+            "true",
+            "sim",
+            "on",
+        }
+        try:
+            resultado = LeituraEmbalagemIaService.extrair_sugestoes(
+                request.user,
+                conteudo_imagem=arquivo.read(),
+                nome_arquivo=getattr(arquivo, "name", "") or "",
+                consentimento_envio=consentimento,
+            )
+        except PermissaoNegada as erro:
+            return JsonResponse({"sucesso": False, "erro": str(erro)}, status=403)
+        except LimiteTaxaExcedido as erro:
+            return JsonResponse(
+                {"sucesso": False, "erro": str(erro), "fallback_manual": True},
+                status=429,
+            )
+        except ServicoIaIndisponivel as erro:
+            return JsonResponse(
+                {"sucesso": False, "erro": str(erro), "fallback_manual": True},
+                status=503,
+            )
+        except ErroDominio as erro:
+            return JsonResponse(
+                {"sucesso": False, "erro": str(erro), "fallback_manual": True},
+                status=400,
+            )
+
+        return JsonResponse(resultado.para_dict(), status=200)
 
 
 class MinhasDoacoesListaView(PerfilObrigatorioMixin, View):

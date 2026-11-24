@@ -1,7 +1,8 @@
-"""Views do app nucleo (proxy interno de CEP e entrega local de arquivo privado)."""
+"""Views do app nucleo (Página Inicial, proxy interno de CEP e entrega de arquivo privado)."""
 
 from django.conf import settings
 from django.http import FileResponse, Http404, JsonResponse
+from django.shortcuts import render
 from django.views import View
 
 from nucleo.arquivos import ArquivoService
@@ -14,7 +15,26 @@ from nucleo.exceptions import (
 )
 from nucleo.mixins import AutenticadoAtivoMixin
 from nucleo.rate_limit import exigir_limite_taxa, obter_ip_cliente
-from nucleo.services import CepService
+from nucleo.services import CepService, HomeService
+
+AVISO_RNF13 = "O ReMed não substitui avaliação médica ou farmacêutica."
+
+
+class HomeView(View):
+    """Página Inicial pública do ReMed na rota raiz `/`."""
+
+    template_name = "nucleo/home.html"
+
+    def get(self, request):
+        resumo = HomeService.obter_resumo_publico()
+        return render(
+            request,
+            self.template_name,
+            {
+                "resumo_publico": resumo,
+                "aviso_rnf13": AVISO_RNF13,
+            },
+        )
 
 
 class CepConsultarView(View):

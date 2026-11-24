@@ -467,3 +467,32 @@ class GeolocalizacaoService:
         if distancia_km <= 10.0:
             return "cerca de 10 km"
         return "mais de 10 km"
+
+
+@dataclass(frozen=True)
+class ResumoPublicoHome:
+    doacoes_disponiveis: int
+    pontos_coleta_ativos: int
+
+
+class HomeService:
+    """Indicadores agregados públicos e anônimos para a Página Inicial (/)."""
+
+    @staticmethod
+    def obter_resumo_publico() -> ResumoPublicoHome:
+        from medicamentos.models import Doacao, StatusDoacao
+        from pontos_coleta.models import PontoColeta, StatusPontoColeta
+
+        hoje = timezone.localdate()
+        doacoes_disponiveis = Doacao.objects.filter(
+            status=StatusDoacao.DISPONIVEL,
+            quantidade_disponivel__gt=0,
+            data_validade__gte=hoje,
+        ).count()
+        pontos_coleta_ativos = PontoColeta.objects.filter(
+            status=StatusPontoColeta.ATIVO,
+        ).count()
+        return ResumoPublicoHome(
+            doacoes_disponiveis=doacoes_disponiveis,
+            pontos_coleta_ativos=pontos_coleta_ativos,
+        )

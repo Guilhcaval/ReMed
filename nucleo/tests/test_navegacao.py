@@ -271,22 +271,23 @@ class NavegacaoGlobalTest(TestCase):
 
     def test_barra_visitante_identica_entre_rotas_e_estado_ativo(self):
         rotas_esperadas = [
-            (reverse("medicamentos:busca"), "Medicamentos"),
-            (reverse("pontos_coleta:lista_publica"), "Pontos de coleta"),
-            (reverse("contas:login"), "Entrar"),
-            (reverse("contas:cadastro"), "Criar conta"),
+            (reverse("nucleo:home"), []),
+            (reverse("medicamentos:busca"), ["Medicamentos"]),
+            (reverse("pontos_coleta:lista_publica"), ["Pontos de coleta"]),
+            (reverse("contas:login"), ["Entrar"]),
+            (reverse("contas:cadastro"), ["Criar conta"]),
         ]
         ordem_esperada = ["Medicamentos", "Pontos de coleta", "Entrar", "Criar conta"]
 
-        for url, ativo_esperado in rotas_esperadas:
+        for url, ativos_esperados in rotas_esperadas:
             with self.subTest(url=url):
                 resp = self.client.get(url)
                 self.assertEqual(resp.status_code, 200)
                 nav = _extrair_navbar(resp)
-                self.assertEqual(nav.brand_href, reverse("medicamentos:busca"))
+                self.assertEqual(nav.brand_href, reverse("nucleo:home"))
                 self.assertEqual([item["texto"] for item in nav.links], ordem_esperada)
                 ativos = [item["texto"] for item in nav.links if item["aria_current"] == "page"]
-                self.assertEqual(ativos, [ativo_esperado])
+                self.assertEqual(ativos, ativos_esperados)
                 self.assertNotIn("Administração", [b["texto"] for b in nav.botoes])
 
     def test_barra_cidadao_sem_vinculo_oculta_meus_pontos_em_todas_as_rotas(self):
@@ -299,6 +300,7 @@ class NavegacaoGlobalTest(TestCase):
         self._logar(cidadao)
 
         rotas_esperadas = [
+            (reverse("nucleo:home"), []),
             (reverse("medicamentos:busca"), [reverse("medicamentos:busca")]),
             (reverse("medicamentos:minhas_doacoes"), [reverse("medicamentos:minhas_doacoes")]),
             (reverse("pontos_coleta:lista_publica"), [reverse("pontos_coleta:lista_publica")]),
@@ -327,7 +329,7 @@ class NavegacaoGlobalTest(TestCase):
                 resp = self.client.get(url)
                 self.assertEqual(resp.status_code, 200)
                 nav = _extrair_navbar(resp)
-                self.assertEqual(nav.brand_href, reverse("medicamentos:busca"))
+                self.assertEqual(nav.brand_href, reverse("nucleo:home"))
                 self.assertEqual([item["href"] for item in nav.links], hrefs_esperados)
                 self.assertEqual([item["texto"] for item in nav.links], textos_esperados)
                 self.assertNotIn("Meus pontos", [item["texto"] for item in nav.links])
@@ -426,6 +428,7 @@ class NavegacaoGlobalTest(TestCase):
         self._logar(admin_completo, verificado_2fa=True)
 
         rotas_esperadas = [
+            (reverse("nucleo:home"), [], False),
             (reverse("medicamentos:busca"), [reverse("medicamentos:busca")], False),
             (
                 reverse("pontos_coleta:lista_publica"),
@@ -481,7 +484,7 @@ class NavegacaoGlobalTest(TestCase):
                 resp = self.client.get(url)
                 self.assertEqual(resp.status_code, 200)
                 nav = _extrair_navbar(resp)
-                self.assertEqual(nav.brand_href, reverse("medicamentos:busca"))
+                self.assertEqual(nav.brand_href, reverse("nucleo:home"))
                 self.assertEqual([item["texto"] for item in nav.links], ordem_esperada)
                 ativos = [item["href"] for item in nav.links if item["aria_current"] == "page"]
                 self.assertEqual(ativos, ativos_esperados)

@@ -104,3 +104,14 @@ class DoacaoVencidaIrreversivel(RegraNegocioViolada):
         mensagem: str = "Uma doação marcada como vencida não pode voltar a ficar disponível.",
     ):
         super().__init__(mensagem)
+
+
+class ServicoIaIndisponivel(RegraNegocioViolada):
+    def __init__(
+        self,
+        mensagem: str = (
+            "Não foi possível ler a embalagem automaticamente no momento. "
+            "Preencha os campos manualmente — nada do que você digitou foi perdido."
+        ),
+    ):
+        super().__init__(mensagem)
