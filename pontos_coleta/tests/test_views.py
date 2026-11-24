@@ -302,3 +302,21 @@ class PontosColetaViewsTest(TestCase):
         self.assertNotContains(resposta, 'role="tablist"')
         self.assertNotContains(resposta, "Pessoa Física · Doador / Solicitante")
         self.assertNotContains(resposta, f'href="{reverse("contas:cadastro")}"')
+
+    def test_lista_publica_exibe_chamada_cadastrar_ponto_para_visitante_e_autenticado(self):
+        url_lista = reverse("pontos_coleta:lista_publica")
+        url_cadastrar = reverse("pontos_coleta:cadastrar")
+
+        resp_visitante = self.client.get(url_lista)
+        self.assertEqual(resp_visitante.status_code, 200)
+        self.assertContains(resp_visitante, "Representa uma instituição?")
+        self.assertContains(resp_visitante, "Cadastrar ponto de coleta")
+        self.assertContains(resp_visitante, f'href="{url_cadastrar}"')
+
+        usuario = self._criar_usuario("visitante-auth@exemplo.com", "52998224725")
+        self.client.force_login(usuario)
+        resp_autenticado = self.client.get(url_lista)
+        self.assertEqual(resp_autenticado.status_code, 200)
+        self.assertContains(resp_autenticado, "Representa uma instituição?")
+        self.assertContains(resp_autenticado, "Cadastrar ponto de coleta")
+        self.assertContains(resp_autenticado, f'href="{url_cadastrar}"')

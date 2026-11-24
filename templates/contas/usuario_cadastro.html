@@ -21,28 +21,6 @@
         <p class="remed-hint mb-0">Cadastro de pessoa física</p>
       </header>
 
-      <div class="remed-tabs-segment row g-1 mb-4" role="tablist" aria-label="Tipo de cadastro">
-        <div class="col-12 col-sm-6">
-          <span
-            class="remed-tab-item is-active d-flex align-items-center justify-content-center text-center w-100"
-            role="tab"
-            aria-selected="true"
-          >
-            <span><strong class="fw-semibold">Pessoa Física</strong> · Doador / Solicitante</span>
-          </span>
-        </div>
-        <div class="col-12 col-sm-6">
-          <a
-            href="{% url 'pontos_coleta:cadastrar' %}"
-            class="remed-tab-item d-flex align-items-center justify-content-center text-center text-decoration-none text-secondary w-100"
-            role="tab"
-            aria-selected="false"
-          >
-            <span><strong class="fw-semibold">Pessoa Jurídica</strong> · Ponto de Coleta</span>
-          </a>
-        </div>
-      </div>
-
       {% if form.errors %}
         <div class="remed-error-summary p-3 mb-4" role="alert" aria-live="polite">
           <p class="fw-semibold mb-1">Não foi possível concluir o cadastro:</p>
@@ -278,6 +256,20 @@
               {% for erro in form.perfil_doador.errors %}{{ erro }}{% endfor %}
             </div>
           {% endif %}
+
+          <div class="remed-banner-neutral p-3 mt-3 d-flex align-items-start gap-2" role="note">
+            <span class="remed-info-icon" aria-hidden="true">i</span>
+            <p class="mb-0 small">
+              <strong>Representa um Ponto de Coleta (farmácia, UBS ou ONG)?</strong>
+              Crie primeiro sua conta pessoal selecionando ao menos um perfil acima. Após confirmar
+              seu e-mail e entrar, você poderá cadastrar a instituição em
+              <strong>Pontos de coleta</strong>. Já tem conta?
+              <a
+                href="{% url 'contas:login' %}?next={% url 'pontos_coleta:cadastrar' %}"
+                class="fw-semibold"
+              >Entrar para cadastrar ponto</a>.
+            </p>
+          </div>
         </fieldset>
 
         <hr class="remed-section-divider my-4">

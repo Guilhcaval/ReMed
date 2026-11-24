@@ -8,6 +8,7 @@ from contas.models import StatusUsuario
 from contas.services import AutenticacaoService
 from notificacoes.services import NotificacaoService
 from nucleo.mixins import SESSAO_CHAVE_2FA_VERIFICADO
+from pontos_coleta.services import PontoColetaService
 
 MAPA_VIEW_SECAO: dict[str, str] = {
     "pontos_coleta:lista_publica": "pontos_publicos",
@@ -102,6 +103,7 @@ def navegacao_global(request) -> dict:
     base_visitante = {
         "nav_autenticado": False,
         "nav_pendente_2fa": False,
+        "nav_exibir_meus_pontos": False,
         "notificacoes_nao_lidas": 0,
         "nav_admin_itens": (),
         "nav_admin_ativo": False,
@@ -118,6 +120,7 @@ def navegacao_global(request) -> dict:
         return {
             "nav_autenticado": True,
             "nav_pendente_2fa": True,
+            "nav_exibir_meus_pontos": False,
             "notificacoes_nao_lidas": 0,
             "nav_admin_itens": (),
             "nav_admin_ativo": False,
@@ -129,6 +132,7 @@ def navegacao_global(request) -> dict:
         return {
             "nav_autenticado": True,
             "nav_pendente_2fa": True,
+            "nav_exibir_meus_pontos": False,
             "notificacoes_nao_lidas": 0,
             "nav_admin_itens": (),
             "nav_admin_ativo": False,
@@ -140,6 +144,7 @@ def navegacao_global(request) -> dict:
     return {
         "nav_autenticado": True,
         "nav_pendente_2fa": False,
+        "nav_exibir_meus_pontos": PontoColetaService.usuario_possui_vinculo_ou_convite(usuario),
         "notificacoes_nao_lidas": NotificacaoService.contar_nao_lidas(usuario.pk),
         "nav_admin_itens": itens_admin,
         "nav_admin_ativo": secao_ativa in secoes_admin,

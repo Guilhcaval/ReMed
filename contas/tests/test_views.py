@@ -86,9 +86,18 @@ class ContasViewsTest(TestCase):
         self.assertEqual(resposta.status_code, 200)
         self.assertContains(resposta, "Criar conta · ReMed")
         self.assertContains(resposta, "Cadastro de pessoa física")
-        self.assertContains(resposta, "Pessoa Jurídica")
-        self.assertContains(resposta, "Ponto de Coleta")
-        self.assertContains(resposta, reverse("pontos_coleta:cadastrar"))
+        self.assertNotContains(resposta, 'role="tablist"')
+        self.assertNotContains(resposta, "Pessoa Jurídica")
+        self.assertNotContains(resposta, "Pessoa Física · Doador / Solicitante")
+        self.assertContains(
+            resposta,
+            "Representa um Ponto de Coleta (farmácia, UBS ou ONG)?",
+        )
+        self.assertContains(resposta, "Entrar para cadastrar ponto")
+        self.assertContains(
+            resposta,
+            f"{reverse('contas:login')}?next={reverse('pontos_coleta:cadastrar')}",
+        )
         self.assertContains(resposta, "Não sei meu CEP")
         self.assertContains(resposta, 'rel="noopener noreferrer"')
         self.assertContains(resposta, "csrfmiddlewaretoken")

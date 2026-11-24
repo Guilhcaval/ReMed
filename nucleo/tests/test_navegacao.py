@@ -14,6 +14,13 @@ from notificacoes.models import TipoNotificacao
 from notificacoes.services import NotificacaoService
 from nucleo.context_processors import navegacao_global
 from nucleo.mixins import SESSAO_CHAVE_2FA_VERIFICADO
+from nucleo.models import TipoEstabelecimento
+from pontos_coleta.models import (
+    PontoColeta,
+    PontoColetaResponsavel,
+    StatusPontoColeta,
+    StatusResponsavelPonto,
+)
 
 
 class _ExtratorNavbar(HTMLParser):
@@ -155,6 +162,37 @@ class NavegacaoGlobalTest(TestCase):
             sessao[SESSAO_CHAVE_2FA_VERIFICADO] = verificado_2fa
             sessao.save()
 
+    def _criar_ponto_e_vinculo(
+        self,
+        usuario: Usuario,
+        *,
+        cnpj: str = "11222333000181",
+        status_vinculo: str = StatusResponsavelPonto.ATIVO,
+    ) -> PontoColeta:
+        tipo = TipoEstabelecimento.objects.first()
+        ponto = PontoColeta.objects.create(
+            cnpj=cnpj,
+            razao_social=f"Instituição {cnpj} LTDA",
+            nome_fantasia=f"Ponto {cnpj}",
+            tipo_estabelecimento=tipo,
+            email=f"ponto-{cnpj}@exemplo.org",
+            telefone="1133334444",
+            possui_refrigeracao=False,
+            cep="01001000",
+            logradouro="Praça da Sé",
+            numero="100",
+            bairro="Sé",
+            municipio="São Paulo",
+            estado="SP",
+            status=StatusPontoColeta.PENDENTE_APROVACAO,
+        )
+        PontoColetaResponsavel.objects.create(
+            ponto_coleta=ponto,
+            usuario=usuario,
+            status=status_vinculo,
+        )
+        return ponto
+
     def test_context_processor_zero_queries_para_anonimos_inativos_e_pendentes_2fa(self):
         rf = RequestFactory()
 
@@ -165,6 +203,7 @@ class NavegacaoGlobalTest(TestCase):
         with self.assertNumQueries(0):
             ctx_anon = navegacao_global(req_anon)
         self.assertFalse(ctx_anon["nav_autenticado"])
+        self.assertFalse(ctx_anon["nav_exibir_meus_pontos"])
         self.assertEqual(ctx_anon["notificacoes_nao_lidas"], 0)
         self.assertEqual(ctx_anon["nav_admin_itens"], ())
 
@@ -180,6 +219,7 @@ class NavegacaoGlobalTest(TestCase):
         with self.assertNumQueries(0):
             ctx_inativo = navegacao_global(req_inativo)
         self.assertFalse(ctx_inativo["nav_autenticado"])
+        self.assertFalse(ctx_inativo["nav_exibir_meus_pontos"])
         self.assertEqual(ctx_inativo["notificacoes_nao_lidas"], 0)
 
         # 3. Conta com e-mail não confirmado -> 0 queries
@@ -194,6 +234,7 @@ class NavegacaoGlobalTest(TestCase):
         with self.assertNumQueries(0):
             ctx_nao_conf = navegacao_global(req_nao_conf)
         self.assertFalse(ctx_nao_conf["nav_autenticado"])
+        self.assertFalse(ctx_nao_conf["nav_exibir_meus_pontos"])
 
         # 4. Conta anonimizada -> 0 queries
         anon = self._criar_usuario(email="", cpf="", anonimizado=True)
@@ -203,6 +244,7 @@ class NavegacaoGlobalTest(TestCase):
         with self.assertNumQueries(0):
             ctx_anonim = navegacao_global(req_anonim)
         self.assertFalse(ctx_anonim["nav_autenticado"])
+        self.assertFalse(ctx_anonim["nav_exibir_meus_pontos"])
 
         # 5. Conta administrativa pendente de 2FA -> 0 queries
         admin_pend = self._criar_usuario(
@@ -218,6 +260,7 @@ class NavegacaoGlobalTest(TestCase):
             ctx_pend = navegacao_global(req_pend_2fa)
         self.assertTrue(ctx_pend["nav_autenticado"])
         self.assertTrue(ctx_pend["nav_pendente_2fa"])
+        self.assertFalse(ctx_pend["nav_exibir_meus_pontos"])
         self.assertEqual(ctx_pend["notificacoes_nao_lidas"], 0)
         self.assertEqual(ctx_pend["nav_admin_itens"], ())
 
@@ -240,7 +283,7 @@ class NavegacaoGlobalTest(TestCase):
                 self.assertEqual(ativos, [ativo_esperado])
                 self.assertNotIn("Administração", [b["texto"] for b in nav.botoes])
 
-    def test_barra_cidadao_identica_entre_rotas_sem_administracao_e_com_badge(self):
+    def test_barra_cidadao_sem_vinculo_oculta_meus_pontos_em_todas_as_rotas(self):
         cidadao = self._criar_usuario(email="cid@exemplo.com", cpf="52998224725")
         NotificacaoService.registrar_evento(
             destinatario=cidadao,
@@ -250,11 +293,52 @@ class NavegacaoGlobalTest(TestCase):
         self._logar(cidadao)
 
         rotas_esperadas = [
-            (reverse("pontos_coleta:lista_publica"), reverse("pontos_coleta:lista_publica")),
-            (reverse("pontos_coleta:cadastrar"), reverse("pontos_coleta:meus_pontos")),
-            (reverse("notificacoes:lista"), reverse("notificacoes:lista")),
-            (reverse("contas:perfil_editar"), reverse("contas:perfil_editar")),
+            (reverse("pontos_coleta:lista_publica"), [reverse("pontos_coleta:lista_publica")]),
+            (reverse("pontos_coleta:cadastrar"), []),
+            (reverse("pontos_coleta:meus_pontos"), []),
+            (reverse("notificacoes:lista"), [reverse("notificacoes:lista")]),
+            (reverse("contas:perfil_editar"), [reverse("contas:perfil_editar")]),
         ]
+        hrefs_esperados = [
+            reverse("pontos_coleta:lista_publica"),
+            reverse("notificacoes:lista"),
+            reverse("contas:perfil_editar"),
+        ]
+        textos_esperados = [
+            "Pontos de coleta",
+            "Notificações 1 não lidas",
+            "Meu perfil",
+        ]
+
+        for url, ativos_esperados in rotas_esperadas:
+            with self.subTest(url=url):
+                resp = self.client.get(url)
+                self.assertEqual(resp.status_code, 200)
+                nav = _extrair_navbar(resp)
+                self.assertEqual(nav.brand_href, reverse("contas:perfil_editar"))
+                self.assertEqual([item["href"] for item in nav.links], hrefs_esperados)
+                self.assertEqual([item["texto"] for item in nav.links], textos_esperados)
+                self.assertNotIn("Meus pontos", [item["texto"] for item in nav.links])
+                ativos = [item["href"] for item in nav.links if item["aria_current"] == "page"]
+                self.assertEqual(ativos, ativos_esperados)
+                self.assertNotIn("Administração", [b["texto"] for b in nav.botoes])
+                self.assertIn("Sair", [b["texto"] for b in nav.botoes])
+
+    def test_barra_exibe_meus_pontos_para_vinculo_ativo_e_convite_pendente_na_mesma_ordem(self):
+        responsavel_ativo = self._criar_usuario(email="resp-ativo@exemplo.com", cpf="52998224725")
+        self._criar_ponto_e_vinculo(
+            responsavel_ativo,
+            cnpj="11222333000181",
+            status_vinculo=StatusResponsavelPonto.ATIVO,
+        )
+
+        convidado = self._criar_usuario(email="convidado@exemplo.com", cpf="11144477735")
+        self._criar_ponto_e_vinculo(
+            convidado,
+            cnpj="11444777000161",
+            status_vinculo=StatusResponsavelPonto.CONVITE_PENDENTE,
+        )
+
         hrefs_esperados = [
             reverse("pontos_coleta:lista_publica"),
             reverse("pontos_coleta:meus_pontos"),
@@ -264,22 +348,42 @@ class NavegacaoGlobalTest(TestCase):
         textos_esperados = [
             "Pontos de coleta",
             "Meus pontos",
-            "Notificações 1 não lidas",
+            "Notificações",
             "Meu perfil",
         ]
+        rotas_esperadas = [
+            (reverse("pontos_coleta:lista_publica"), reverse("pontos_coleta:lista_publica")),
+            (reverse("pontos_coleta:meus_pontos"), reverse("pontos_coleta:meus_pontos")),
+            (reverse("pontos_coleta:cadastrar"), reverse("pontos_coleta:meus_pontos")),
+            (reverse("notificacoes:lista"), reverse("notificacoes:lista")),
+            (reverse("contas:perfil_editar"), reverse("contas:perfil_editar")),
+        ]
 
-        for url, href_ativo_esperado in rotas_esperadas:
-            with self.subTest(url=url):
-                resp = self.client.get(url)
-                self.assertEqual(resp.status_code, 200)
-                nav = _extrair_navbar(resp)
-                self.assertEqual(nav.brand_href, reverse("contas:perfil_editar"))
-                self.assertEqual([item["href"] for item in nav.links], hrefs_esperados)
-                self.assertEqual([item["texto"] for item in nav.links], textos_esperados)
-                ativos = [item["href"] for item in nav.links if item["aria_current"] == "page"]
-                self.assertEqual(ativos, [href_ativo_esperado])
-                self.assertNotIn("Administração", [b["texto"] for b in nav.botoes])
-                self.assertIn("Sair", [b["texto"] for b in nav.botoes])
+        for perfil_nome, usuario in (
+            ("vinculo_ativo", responsavel_ativo),
+            ("convite_pendente", convidado),
+        ):
+            self._logar(usuario)
+            for url, href_ativo_esperado in rotas_esperadas:
+                with self.subTest(perfil=perfil_nome, url=url):
+                    resp = self.client.get(url)
+                    self.assertEqual(resp.status_code, 200)
+                    nav = _extrair_navbar(resp)
+                    self.assertEqual([item["href"] for item in nav.links], hrefs_esperados)
+                    self.assertEqual([item["texto"] for item in nav.links], textos_esperados)
+                    ativos = [item["href"] for item in nav.links if item["aria_current"] == "page"]
+                    self.assertEqual(ativos, [href_ativo_esperado])
+
+        # Vínculo recusado ou removido não exibe "Meus pontos"
+        recusado = self._criar_usuario(email="recusado@exemplo.com", cpf="12345678909")
+        self._criar_ponto_e_vinculo(
+            recusado,
+            cnpj="27865757000102",
+            status_vinculo=StatusResponsavelPonto.RECUSADO,
+        )
+        self._logar(recusado)
+        nav_recusado = _extrair_navbar(self.client.get(reverse("contas:perfil_editar")))
+        self.assertNotIn("Meus pontos", [item["texto"] for item in nav_recusado.links])
 
     def test_barra_admin_com_2fa_identica_em_todas_as_rotas_e_dropdown_filtrado(self):
         admin_completo = self._criar_usuario(
@@ -291,21 +395,28 @@ class NavegacaoGlobalTest(TestCase):
         self._logar(admin_completo, verificado_2fa=True)
 
         rotas_esperadas = [
-            (reverse("pontos_coleta:lista_publica"), reverse("pontos_coleta:lista_publica"), False),
-            (reverse("pontos_coleta:cadastrar"), reverse("pontos_coleta:meus_pontos"), False),
-            (reverse("notificacoes:lista"), reverse("notificacoes:lista"), False),
-            (reverse("contas:perfil_editar"), reverse("contas:perfil_editar"), False),
-            (reverse("contas:admin_usuario_lista"), reverse("contas:admin_usuario_lista"), True),
-            (reverse("pontos_coleta:admin_lista"), reverse("pontos_coleta:admin_lista"), True),
+            (
+                reverse("pontos_coleta:lista_publica"),
+                [reverse("pontos_coleta:lista_publica")],
+                False,
+            ),
+            (reverse("pontos_coleta:cadastrar"), [], False),
+            (reverse("notificacoes:lista"), [reverse("notificacoes:lista")], False),
+            (reverse("contas:perfil_editar"), [reverse("contas:perfil_editar")], False),
+            (
+                reverse("contas:admin_usuario_lista"),
+                [reverse("contas:admin_usuario_lista")],
+                True,
+            ),
+            (reverse("pontos_coleta:admin_lista"), [reverse("pontos_coleta:admin_lista")], True),
             (
                 reverse("pontos_coleta:admin_documentos"),
-                reverse("pontos_coleta:admin_documentos"),
+                [reverse("pontos_coleta:admin_documentos")],
                 True,
             ),
         ]
         ordem_esperada = [
             "Pontos de coleta",
-            "Meus pontos",
             "Notificações",
             "Gestão de usuários",
             "Aprovação de pontos",
@@ -313,18 +424,38 @@ class NavegacaoGlobalTest(TestCase):
             "Meu perfil",
         ]
 
-        for url, href_ativo_esperado, dropdown_ativo in rotas_esperadas:
+        for url, ativos_esperados, dropdown_ativo in rotas_esperadas:
             with self.subTest(url=url):
                 resp = self.client.get(url)
                 self.assertEqual(resp.status_code, 200)
                 nav = _extrair_navbar(resp)
                 self.assertEqual([item["texto"] for item in nav.links], ordem_esperada)
                 ativos = [item["href"] for item in nav.links if item["aria_current"] == "page"]
-                self.assertEqual(ativos, [href_ativo_esperado])
+                self.assertEqual(ativos, ativos_esperados)
                 botoes_admin = [b for b in nav.botoes if b["texto"] == "Administração"]
                 self.assertEqual(len(botoes_admin), 1)
                 tem_classe_active = "active" in botoes_admin[0]["class"].split()
                 self.assertEqual(tem_classe_active, dropdown_ativo)
+
+        # Admin com vínculo ativo exibe "Meus pontos" antes de Notificações e Administração
+        self._criar_ponto_e_vinculo(
+            admin_completo,
+            cnpj="11222333000181",
+            status_vinculo=StatusResponsavelPonto.ATIVO,
+        )
+        nav_admin_vinculado = _extrair_navbar(self.client.get(reverse("contas:perfil_editar")))
+        self.assertEqual(
+            [item["texto"] for item in nav_admin_vinculado.links],
+            [
+                "Pontos de coleta",
+                "Meus pontos",
+                "Notificações",
+                "Gestão de usuários",
+                "Aprovação de pontos",
+                "Documentos de pontos",
+                "Meu perfil",
+            ],
+        )
 
         # Admin somente com gestao_usuarios vê apenas Gestão de usuários no dropdown
         admin_so_usuarios = self._criar_usuario(

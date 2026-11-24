@@ -70,15 +70,17 @@
                     Pontos de coleta
                   </a>
                 </li>
-                <li class="nav-item">
-                  <a
-                    class="nav-link remed-nav-link{% if nav_secao_ativa == 'meus_pontos' %} active{% endif %}"
-                    {% if nav_secao_ativa == 'meus_pontos' %}aria-current="page"{% endif %}
-                    href="{% url 'pontos_coleta:meus_pontos' %}"
-                  >
-                    Meus pontos
-                  </a>
-                </li>
+                {% if nav_exibir_meus_pontos %}
+                  <li class="nav-item">
+                    <a
+                      class="nav-link remed-nav-link{% if nav_secao_ativa == 'meus_pontos' %} active{% endif %}"
+                      {% if nav_secao_ativa == 'meus_pontos' %}aria-current="page"{% endif %}
+                      href="{% url 'pontos_coleta:meus_pontos' %}"
+                    >
+                      Meus pontos
+                    </a>
+                  </li>
+                {% endif %}
                 <li class="nav-item">
                   <a
                     class="nav-link remed-nav-link{% if nav_secao_ativa == 'notificacoes' %} active{% endif %}"

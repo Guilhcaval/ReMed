@@ -293,6 +293,18 @@ class PontoColetaService:
         return list(TipoEstabelecimento.objects.filter(ativo=True).order_by("id"))
 
     @staticmethod
+    def usuario_possui_vinculo_ou_convite(usuario: Usuario) -> bool:
+        if getattr(usuario, "pk", None) is None:
+            return False
+        return PontoColetaResponsavel.objects.filter(
+            usuario_id=usuario.pk,
+            status__in=(
+                StatusResponsavelPonto.ATIVO,
+                StatusResponsavelPonto.CONVITE_PENDENTE,
+            ),
+        ).exists()
+
+    @staticmethod
     def _convidar_responsavel_interno(
         ponto: PontoColeta,
         ator: Usuario,

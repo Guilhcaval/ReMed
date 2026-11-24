@@ -19,6 +19,26 @@
         </span>
       </header>
 
+      <div
+        class="remed-banner-neutral p-3 mb-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3"
+        role="region"
+        aria-label="Parceria para pontos de coleta"
+      >
+        <div class="d-flex align-items-start gap-2">
+          <span class="remed-info-icon" aria-hidden="true">i</span>
+          <div class="small">
+            <strong class="d-block">Representa uma instituição?</strong>
+            Farmácias, UBS, hospitais, clínicas e ONGs podem se cadastrar como locais parceiros de retirada presencial.
+          </div>
+        </div>
+        <a
+          href="{% url 'pontos_coleta:cadastrar' %}"
+          class="btn remed-btn-accent fw-semibold text-nowrap d-inline-flex align-items-center justify-content-center align-self-start align-self-md-center px-3"
+        >
+          Cadastrar ponto de coleta
+        </a>
+      </div>
+
       <form method="get" action="{% url 'pontos_coleta:lista_publica' %}" class="border rounded p-3 mb-4 bg-light" novalidate>
         <div class="row g-3">
           <div class="col-12 col-md-5">
