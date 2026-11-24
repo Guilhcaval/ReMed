@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Conferência de doações · Administração · ReMed{% endblock %}
+
+{% block content %}
+  <div class="remed-admin-wrapper">
+    <section class="remed-card p-3 p-sm-4 p-md-5 shadow-sm" aria-labelledby="titulo-fila-conferencia">
+      <header class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+          <h1 id="titulo-fila-conferencia" class="h3 fw-bold remed-auth-title mb-1">
+            Fila de conferência de doações
+          </h1>
+          <p class="remed-hint mb-0">
+            Doações em análise ordenadas pela data de validade mais próxima primeiro.
+          </p>
+        </div>
+        <span class="badge remed-badge-read px-3 py-2 align-self-start align-self-md-center">
+          {{ total_encontrados }} em análise
+        </span>
+      </header>
+
+      <form method="get" action="{% url 'medicamentos:admin_conferencia_lista' %}" class="border rounded p-3 mb-4 bg-light" novalidate>
+        <div class="row g-3">
+          <div class="col-12 col-md-4">
+            <label for="{{ form.termo.id_for_label }}" class="form-label fw-medium">{{ form.termo.label }}</label>
+            {{ form.termo }}
+          </div>
+          <div class="col-12 col-md-3">
+            <label for="{{ form.condicao_conservacao.id_for_label }}" class="form-label fw-medium">{{ form.condicao_conservacao.label }}</label>
+            {{ form.condicao_conservacao }}
+          </div>
+          <div class="col-12 col-md-2">
+            <label for="{{ form.sujeito_receita.id_for_label }}" class="form-label fw-medium">{{ form.sujeito_receita.label }}</label>
+            {{ form.sujeito_receita }}
+          </div>
+          <div class="col-12 col-md-3">
+            <label for="{{ form.data_inicio.id_for_label }}" class="form-label fw-medium">{{ form.data_inicio.label }}</label>
+            {{ form.data_inicio }}
+          </div>
+        </div>
+        <div class="d-flex flex-wrap gap-2 mt-3">
+          <button type="submit" class="btn btn-primary btn-sm px-3">Filtrar</button>
+          <a href="{% url 'medicamentos:admin_conferencia_lista' %}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center">
+            Limpar
+          </a>
+        </div>
+      </form>
+
+      {% if pagina.object_list %}
+        <div class="table-responsive mb-3">
+          <table class="table align-middle">
+            <thead>
+              <tr>
+                <th>Medicamento</th>
+                <th>Lote / Validade</th>
+                <th>Conservação / Receita</th>
+                <th>Cadastrada em</th>
+                <th class="text-end">Ação</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for doacao in pagina.object_list %}
+                <tr>
+                  <td>
+                    <div class="fw-semibold">{{ doacao.nome_medicamento }}</div>
+                    <div class="small text-secondary">
+                      {{ doacao.principio_ativo }} · {{ doacao.concentracao_dosagem }} · {{ doacao.forma_farmaceutica.nome }}
+                    </div>
+                  </td>
+                  <td>
+                    <div>{{ doacao.data_validade|date:"d/m/Y" }}</div>
+                    <div class="small text-secondary">Lote {{ doacao.lote }} · {{ doacao.quantidade_inicial }} un.</div>
+                  </td>
+                  <td>
+                    {% if doacao.condicao_conservacao == "refrigerado" %}
+                      <span class="badge remed-badge-refrigerado">Refrigerado</span>
+                    {% else %}
+                      <span class="badge remed-badge-read">Ambiente</span>
+                    {% endif %}
+                    {% if doacao.sujeito_receita %}
+                      <span class="badge remed-badge-receita">Exige receita</span>
+                    {% endif %}
+                  </td>
+                  <td class="small">{{ doacao.criado_em|date:"d/m/Y H:i" }}</td>
+                  <td class="text-end">
+                    <a
+                      href="{% url 'medicamentos:admin_conferencia_detalhe' doacao_id=doacao.pk %}"
+                      class="btn btn-outline-primary btn-sm d-inline-flex align-items-center"
+                    >
+                      Conferir
+                    </a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="text-center py-4 border rounded bg-light">
+          <p class="fw-medium mb-0">Não há doações aguardando conferência no momento.</p>
+        </div>
+      {% endif %}
+    </section>
+  </div>
+{% endblock %}

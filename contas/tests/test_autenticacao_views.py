@@ -79,6 +79,7 @@ class AutenticacaoViewsEMixinsTest(TestCase):
         self.assertContains(resposta, "Esqueci minha senha")
         self.assertContains(resposta, "Criar conta")
         self.assertContains(resposta, "Continuar como visitante")
+        self.assertContains(resposta, f'href="{reverse("medicamentos:busca")}"')
 
     def test_login_rotaciona_sessao_registra_sessao_usuario_e_bloqueia_open_redirect(self):
         """CA-02-01 e CA-02-12."""

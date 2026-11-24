@@ -2,16 +2,20 @@
 
 import logging
 import re
+from contextlib import redirect_stdout
 from datetime import date
+from io import StringIO
+from urllib.parse import urlparse
 
 from django.conf import settings
 from django.core.cache import cache
+from django.core.management import call_command
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from contas.models import StatusUsuario, Usuario
+from contas.models import StatusUsuario, TokenConfirmacaoEmail, Usuario
 from contas.services import DadosCadastroUsuario, DadosEndereco, UsuarioService
-from notificacoes.models import OutboxEmail
+from notificacoes.models import OutboxEmail, StatusOutboxEmail
 
 
 def _post_cadastro(**sobrescritas) -> dict:
@@ -370,3 +374,77 @@ class ContasViewsTest(TestCase):
         usuario.refresh_from_db()
         self.assertIsNotNone(usuario.anonimizado_em)
         self.assertNotIn("_auth_user_id", self.client.session)
+
+    @override_settings(
+        DEBUG=True,
+        EMAIL_BACKEND="django.core.mail.backends.console.EmailBackend",
+        DEFAULT_FROM_EMAIL="nao-responda@remed.local",
+    )
+    def test_fluxo_real_cadastro_reenvio_despachar_emails_e_confirmacao(self):
+        """Fluxo ponta a ponta: cadastro -> reenvio -> despachar_emails -> GET confirmar-email."""
+        r_cad = self.client.post(reverse("contas:cadastro"), data=_post_cadastro(), follow=True)
+        self.assertEqual(r_cad.status_code, 200)
+        usuario = Usuario.objects.get(email="joao@exemplo.com")
+        self.assertIsNone(usuario.email_confirmado_em)
+
+        # Reenvio invalida token anterior e suprime outbox obsoleto ainda pendente
+        r_reenvio = self.client.post(
+            reverse("contas:reenviar_confirmacao"),
+            data={"email": "joao@exemplo.com"},
+            follow=True,
+        )
+        self.assertEqual(r_reenvio.status_code, 200)
+        self.assertEqual(
+            OutboxEmail.objects.filter(
+                destinatario=usuario, status=StatusOutboxEmail.SUPRIMIDA
+            ).count(),
+            1,
+        )
+        self.assertEqual(
+            OutboxEmail.objects.filter(
+                destinatario=usuario, status=StatusOutboxEmail.PENDENTE
+            ).count(),
+            1,
+        )
+
+        # Despacho com console.EmailBackend padrão (que usa quoted-printable) exibe link íntegro
+        saida_cmd = StringIO()
+        saida_console = StringIO()
+        with redirect_stdout(saida_console):
+            call_command("despachar_emails", stdout=saida_cmd)
+
+        texto_cmd = saida_cmd.getvalue()
+        links = re.findall(r"https?://[^\s]+/contas/confirmar-email/[^\s]+", texto_cmd)
+        self.assertEqual(len(links), 1)
+        link_unico = links[0]
+        self.assertNotIn("=", link_unico)
+
+        caminho_confirmacao = urlparse(link_unico).path
+        primeira = self.client.get(caminho_confirmacao)
+        self.assertEqual(primeira.status_code, 200)
+        self.assertContains(primeira, "E-mail confirmado com sucesso")
+
+        usuario.refresh_from_db()
+        self.assertIsNotNone(usuario.email_confirmado_em)
+        self.assertFalse(
+            TokenConfirmacaoEmail.objects.filter(usuario=usuario, usado_em__isnull=True).exists()
+        )
+
+        # Reuso do mesmo link é bloqueado
+        segunda = self.client.get(caminho_confirmacao)
+        self.assertEqual(segunda.status_code, 200)
+        self.assertContains(segunda, "Não foi possível confirmar o e-mail")
+
+    @override_settings(
+        DEBUG=False,
+        EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+        DEFAULT_FROM_EMAIL="nao-responda@remed.local",
+    )
+    def test_despachar_emails_nao_exibe_link_confirmacao_em_producao(self):
+        """Com DEBUG=False, despachar_emails nunca imprime token/URL de confirmação no stdout."""
+        self.client.post(reverse("contas:cadastro"), data=_post_cadastro(), follow=True)
+        saida_cmd = StringIO()
+        call_command("despachar_emails", stdout=saida_cmd)
+        texto_cmd = saida_cmd.getvalue()
+        self.assertNotIn("/contas/confirmar-email/", texto_cmd)
+        self.assertIn("enviados=1", texto_cmd)

@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if modo_edicao %}Editar doação{% else %}Cadastrar doação{% endif %} · ReMed{% endblock %}
+
+{% block content %}
+  <div class="remed-auth-wrapper">
+    <section class="remed-card p-3 p-sm-4 p-md-5 shadow-sm" aria-labelledby="titulo-doacao">
+      <div class="mb-3">
+        <a href="{% url 'medicamentos:minhas_doacoes' %}" class="remed-cep-help-link">
+          &larr; Voltar para Minhas doações
+        </a>
+      </div>
+
+      <header class="mb-4">
+        <h1 id="titulo-doacao" class="h3 fw-bold remed-auth-title mb-1">
+          {% if modo_edicao %}Editar doação de medicamento{% else %}Cadastrar doação de medicamento{% endif %}
+        </h1>
+        <p class="remed-hint mb-0">
+          Toda doação passa por conferência de validade e integridade antes de ficar disponível na busca.
+        </p>
+      </header>
+
+      <div class="remed-banner-info p-3 mb-4 d-flex align-items-start gap-2" role="note">
+        <span class="remed-info-icon" aria-hidden="true">i</span>
+        <p class="mb-0 small">
+          <strong>Aviso importante:</strong> {{ aviso_rnf13 }}
+          Medicamentos vencidos ou abaixo do prazo mínimo ({{ validade_minima_dias }} dias) e medicamentos de controle especial não são aceitos.
+        </p>
+      </div>
+
+      {% if modo_edicao and doacao.status == "disponivel" %}
+        <div class="remed-banner-neutral p-3 mb-4 small" role="note">
+          Alterar qualquer campo farmacêutico, validade, lote, quantidade, conservação ou foto devolverá esta doação para <strong>Em análise</strong> para nova conferência.
+        </div>
+      {% endif %}
+
+      {% if form.errors %}
+        <div class="remed-error-summary p-3 mb-4" role="alert" aria-live="polite">
+          <p class="fw-semibold mb-1">Revise os dados da doação:</p>
+          <ul class="mb-0 ps-3 small">
+            {% for msg in form.mensagens_resumo_erros %}
+              <li>{{ msg }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      <form
+        method="post"
+        action="{% if modo_edicao %}{% url 'medicamentos:doacao_editar' doacao_id=doacao.pk %}{% else %}{% url 'medicamentos:doacao_criar' %}{% endif %}"
+        enctype="multipart/form-data"
+        novalidate
+      >
+        {% csrf_token %}
+
+        <fieldset class="mb-4">
+          <legend class="remed-section-title mb-1">Identificação do medicamento</legend>
+          <p class="remed-hint mb-3">Os campos com <span class="remed-required-mark">*</span> são obrigatórios.</p>
+
+          <div class="mb-3">
+            <label for="{{ form.nome_medicamento.id_for_label }}" class="form-label fw-medium">
+              {{ form.nome_medicamento.label }} <span class="remed-required-mark" aria-hidden="true">*</span>
+            </label>
+            {{ form.nome_medicamento }}
+            {% if form.nome_medicamento.errors %}
+              <div class="invalid-feedback d-block">{% for e in form.nome_medicamento.errors %}{{ e }}{% endfor %}</div>
+            {% endif %}
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-12 col-md-7">
+              <label for="{{ form.principio_ativo.id_for_label }}" class="form-label fw-medium">
+                {{ form.principio_ativo.label }} <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              {{ form.principio_ativo }}
+              {% if form.principio_ativo.errors %}
+                <div class="invalid-feedback d-block">{% for e in form.principio_ativo.errors %}{{ e }}{% endfor %}</div>
+              {% endif %}
+            </div>
+            <div class="col-12 col-md-5">
+              <label for="{{ form.concentracao_dosagem.id_for_label }}" class="form-label fw-medium">
+                {{ form.concentracao_dosagem.label }} <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              {{ form.concentracao_dosagem }}
+              {% if form.concentracao_dosagem.errors %}
+                <div class="invalid-feedback d-block">{% for e in form.concentracao_dosagem.errors %}{{ e }}{% endfor %}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-12 col-md-6">
+              <label for="{{ form.forma_farmaceutica.id_for_label }}" class="form-label fw-medium">
+                {{ form.forma_farmaceutica.label }} <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              {{ form.forma_farmaceutica }}
+              {% if form.forma_farmaceutica.errors %}
+                <div class="invalid-feedback d-block">{% for e in form.forma_farmaceutica.errors %}{{ e }}{% endfor %}</div>
+              {% endif %}
+            </div>
+            <div class="col-12 col-md-6">
+              <label for="{{ form.quantidade.id_for_label }}" class="form-label fw-medium">
+                {{ form.quantidade.label }} <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              {{ form.quantidade }}
+              {% if form.quantidade.errors %}
+                <div class="invalid-feedback d-block">{% for e in form.quantidade.errors %}{{ e }}{% endfor %}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-12 col-md-5">
+              <label for="{{ form.fabricante.id_for_label }}" class="form-label fw-medium">
+                {{ form.fabricante.label }} <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              {{ form.fabricante }}
+              {% if form.fabricante.errors %}
+                <div class="invalid-feedback d-block">{% for e in form.fabricante.errors %}{{ e }}{% endfor %}</div>
+              {% endif %}
+            </div>
+            <div class="col-12 col-md-3">
+              <label for="{{ form.lote.id_for_label }}" class="form-label fw-medium">
+                {{ form.lote.label }} <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              {{ form.lote }}
+              {% if form.lote.errors %}
+                <div class="invalid-feedback d-block">{% for e in form.lote.errors %}{{ e }}{% endfor %}</div>
+              {% endif %}
+            </div>
+            <div class="col-12 col-md-4">
+              <label for="{{ form.data_validade.id_for_label }}" class="form-label fw-medium">
+                {{ form.data_validade.label }} <span class="remed-required-mark" aria-hidden="true">*</span>
+              </label>
+              {{ form.data_validade }}
+              <div class="remed-hint mt-1">Validade mínima restante: {{ validade_minima_dias }} dias.</div>
+              {% if form.data_validade.errors %}
+                <div class="invalid-feedback d-block">{% for e in form.data_validade.errors %}{{ e }}{% endfor %}</div>
+              {% endif %}
+            </div>
+          </div>
+        </fieldset>
+
+        <hr class="remed-section-divider my-4">
+
+        <fieldset class="mb-4">
+          <legend class="remed-section-title mb-2">Segurança sanitária e conservação</legend>
+
+          <div class="mb-3">
+            <span class="form-label fw-medium d-block">
+              {{ form.embalagem_integra.label }} <span class="remed-required-mark" aria-hidden="true">*</span>
+            </span>
+            <div class="d-flex gap-4">
+              {% for radio in form.embalagem_integra %}
+                <div class="form-check remed-check-touch">
+                  {{ radio.tag }}
+                  <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                </div>
+              {% endfor %}
+            </div>
+            <div id="aviso-embalagem-violada" class="alert alert-danger small py-2 mt-2 d-none" role="alert">
+              Apenas medicamentos com embalagem íntegra podem ser doados.
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <span class="form-label fw-medium d-block">
+              {{ form.controle_especial.label }} <span class="remed-required-mark" aria-hidden="true">*</span>
+            </span>
+            <div class="d-flex gap-4">
+              {% for radio in form.controle_especial %}
+                <div class="form-check remed-check-touch">
+                  {{ radio.tag }}
+                  <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                </div>
+              {% endfor %}
+            </div>
+            <div id="aviso-controle-especial" class="alert alert-danger small py-2 mt-2 d-none" role="alert">
+              Medicamentos de controle especial (Portaria SVS/MS nº 344/1998) estão bloqueados para doação.
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <span class="form-label fw-medium d-block">
+              {{ form.sujeito_receita.label }} <span class="remed-required-mark" aria-hidden="true">*</span>
+            </span>
+            <div class="d-flex gap-4">
+              {% for radio in form.sujeito_receita %}
+                <div class="form-check remed-check-touch">
+                  {{ radio.tag }}
+                  <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="{{ form.condicao_conservacao.id_for_label }}" class="form-label fw-medium">
+              {{ form.condicao_conservacao.label }} <span class="remed-required-mark" aria-hidden="true">*</span>
+            </label>
+            {{ form.condicao_conservacao }}
+          </div>
+
+          <div id="bloco-refrigeracao" class="remed-banner-neutral p-3 mb-3">
+            <h2 class="h6 fw-bold mb-1">Controle de conservação (medicamento refrigerado)</h2>
+            <p class="remed-hint mb-3">
+              Obrigatório quando a conservação for <strong>Refrigerado</strong>. Em geral entre 2 °C e 8 °C — a informação da bula prevalece.
+            </p>
+            <div class="mb-3">
+              <label for="{{ form.faixa_temperatura_bula.id_for_label }}" class="form-label fw-medium">
+                {{ form.faixa_temperatura_bula.label }}
+              </label>
+              {{ form.faixa_temperatura_bula }}
+            </div>
+            <div class="form-check d-flex align-items-start gap-2">
+              {{ form.declaracao_doador_conservacao }}
+              <label class="form-check-label small" for="{{ form.declaracao_doador_conservacao.id_for_label }}">
+                {{ form.declaracao_doador_conservacao.label }}
+              </label>
+            </div>
+          </div>
+        </fieldset>
+
+        <hr class="remed-section-divider my-4">
+
+        <fieldset class="mb-4">
+          <legend class="remed-section-title mb-1">Fotos da embalagem</legend>
+          <p class="remed-hint mb-3">
+            Envie de 1 a 2 fotos em <strong>JPG ou PNG (máximo 5 MB cada)</strong> mostrando frente, validade e lote.
+            Por privacidade (LGPD), <strong>não fotografe etiquetas com nome ou dados pessoais de pacientes</strong>.
+          </p>
+
+          {% if modo_edicao and fotos_existentes %}
+            <div class="remed-banner-neutral p-3 mb-3 small">
+              <strong class="d-block mb-1">Fotos atuais vinculadas:</strong>
+              <ul class="mb-0 ps-3">
+                {% for foto in fotos_existentes %}
+                  <li>
+                    <a href="{% url 'medicamentos:doacao_foto_acessar' foto_id=foto.pk %}">
+                      Abrir foto {{ foto.ordem }} (link temporário 60 s)
+                    </a>
+                  </li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+
+          <div class="mb-3">
+            <label for="{{ form.foto_1.id_for_label }}" class="form-label fw-medium">
+              {{ form.foto_1.label }}{% if not modo_edicao %} <span class="remed-required-mark" aria-hidden="true">*</span>{% endif %}
+            </label>
+            {{ form.foto_1 }}
+            {% if form.foto_1.errors %}
+              <div class="invalid-feedback d-block">{% for e in form.foto_1.errors %}{{ e }}{% endfor %}</div>
+            {% endif %}
+          </div>
+
+          <div class="mb-0">
+            <label for="{{ form.foto_2.id_for_label }}" class="form-label fw-medium">
+              {{ form.foto_2.label }}
+            </label>
+            {{ form.foto_2 }}
+            {% if form.foto_2.errors %}
+              <div class="invalid-feedback d-block">{% for e in form.foto_2.errors %}{{ e }}{% endfor %}</div>
+            {% endif %}
+          </div>
+        </fieldset>
+
+        <hr class="remed-section-divider my-4">
+
+        <fieldset class="mb-4">
+          <legend class="remed-section-title mb-1">Retirada e observações</legend>
+          <p class="remed-hint mb-3">
+            Escolha preferencialmente um ponto de coleta ativo (pontos com refrigeração aparecem primeiro). Seu endereço residencial nunca é sugerido nem exibido.
+          </p>
+
+          <div class="mb-3">
+            <label for="{{ form.ponto_coleta.id_for_label }}" class="form-label fw-medium">
+              {{ form.ponto_coleta.label }}
+            </label>
+            {{ form.ponto_coleta }}
+          </div>
+
+          <div>
+            <label for="{{ form.observacoes.id_for_label }}" class="form-label fw-medium">
+              {{ form.observacoes.label }}
+            </label>
+            {{ form.observacoes }}
+          </div>
+        </fieldset>
+
+        <div class="d-flex flex-wrap gap-2">
+          <button type="submit" class="btn btn-primary fw-semibold px-4">
+            {% if modo_edicao %}Salvar alterações{% else %}Cadastrar doação{% endif %}
+          </button>
+          <a href="{% url 'medicamentos:minhas_doacoes' %}" class="btn btn-outline-secondary d-inline-flex align-items-center px-3">
+            Cancelar
+          </a>
+        </div>
+      </form>
+    </section>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'js/doacao_form.js' %}" defer></script>
+{% endblock %}

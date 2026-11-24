@@ -284,13 +284,15 @@ def _verificar_agendamentos_confirmados_noop(usuario: Usuario) -> bool:
 
 
 def _cancelar_pendencias_usuario_noop(usuario: Usuario) -> None:
-    """Gancho padrão até os apps medicamentos e solicitacoes existirem.
+    """Cancela doações abertas do usuário no encerramento LGPD (Spec 01 / Spec 08).
 
-    TODO(Etapa 5 / Spec 08 — RF008 e Etapa 6 / Spec 12 — RF013): cancelar automaticamente
-    doações com status "disponível" e solicitações com status "aberta" do usuário,
-    notificando a outra parte vinculada via NotificacaoService.
+    Importação local evita dependência circular entre `contas` e `medicamentos`.
+    TODO(Etapa 7 / Spec 12 — RF013): cancelar também solicitações com status "aberta"
+    do usuário, notificando a outra parte vinculada via NotificacaoService.
     """
-    _ = usuario
+    from medicamentos.services import DoacaoService
+
+    DoacaoService.cancelar_doacoes_abertas_no_encerramento(usuario)
 
 
 class SessaoService:
@@ -352,7 +354,7 @@ class UsuarioService:
         construir_url_confirmacao: Callable[[str], str],
     ) -> TokenConfirmacaoEmail:
         agora = timezone.now()
-        token_claro = secrets.token_urlsafe(32)
+        token_claro = secrets.token_urlsafe(32).rstrip("=")
         expira_em = agora + timedelta(hours=settings.REMED_CONFIRMACAO_EMAIL_EXPIRACAO_HORAS)
         token_obj = TokenConfirmacaoEmail.objects.create(
             usuario=usuario,
@@ -568,6 +570,7 @@ class UsuarioService:
                 tipo=TipoTokenConfirmacao.CADASTRO,
                 usado_em__isnull=True,
             ).update(usado_em=agora)
+            NotificacaoService.suprimir_emails_confirmacao_pendentes(usuario)
 
             UsuarioService._gerar_e_enfileirar_token(
                 usuario=usuario,
@@ -673,6 +676,7 @@ class UsuarioService:
                     tipo=TipoTokenConfirmacao.ALTERACAO_EMAIL,
                     usado_em__isnull=True,
                 ).update(usado_em=agora)
+                NotificacaoService.suprimir_emails_confirmacao_pendentes(usuario)
 
                 UsuarioService._gerar_e_enfileirar_token(
                     usuario=usuario,

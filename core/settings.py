@@ -75,6 +75,7 @@ INSTALLED_APPS = [
     "auditoria",
     "notificacoes",
     "pontos_coleta",
+    "medicamentos",
 ]
 
 AUTH_USER_MODEL = "contas.Usuario"
@@ -183,10 +184,10 @@ if not DEBUG:
     SECURE_HSTS_PRELOAD = True
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
-# E-mail (SMTP nativo em produção/homologação; console em desenvolvimento — ADR 0015)
+# E-mail (SMTP nativo em produção/homologação; console legível em desenvolvimento — ADR 0015)
 EMAIL_BACKEND = _obter_env(
     "DJANGO_EMAIL_BACKEND",
-    "django.core.mail.backends.console.EmailBackend"
+    "notificacoes.backends.ConsoleEmailBackend"
     if DEBUG
     else "django.core.mail.backends.smtp.EmailBackend",
 )
@@ -248,6 +249,11 @@ REMED_NOTIFICACAO_ALERTA_FALHAS_LOTE = _obter_int("REMED_NOTIFICACAO_ALERTA_FALH
 REMED_PONTO_DOC_AVISO_VENCIMENTO_DIAS = _obter_int("REMED_PONTO_DOC_AVISO_VENCIMENTO_DIAS", 30)
 REMED_PONTO_REVISAO_PERIODICA_DIAS = _obter_int("REMED_PONTO_REVISAO_PERIODICA_DIAS", 180)
 REMED_REFRIGERADO_JANELA_MAX_MINUTOS = _obter_int("REMED_REFRIGERADO_JANELA_MAX_MINUTOS", 120)
+REMED_VENCIMENTO_MAX_RETENTATIVAS = _obter_int("REMED_VENCIMENTO_MAX_RETENTATIVAS", 3)
+REMED_VENCIMENTO_RETRY_INTERVALO_SEGUNDOS = _obter_int(
+    "REMED_VENCIMENTO_RETRY_INTERVALO_SEGUNDOS", 900
+)
+REMED_NOMINATIM_INTERVALO_SEGUNDOS = _obter_int("REMED_NOMINATIM_INTERVALO_SEGUNDOS", 1)
 REMED_SOLICITACOES_ABERTAS_MAX_POR_USUARIO = _obter_int(
     "REMED_SOLICITACOES_ABERTAS_MAX_POR_USUARIO", 5
 )

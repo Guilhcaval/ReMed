@@ -134,14 +134,12 @@
       <hr class="remed-section-divider my-4">
 
       <div class="text-center mb-3">
-        <span
-          class="d-inline-flex align-items-center gap-2 fw-semibold remed-visitor-disabled"
-          aria-disabled="true"
-          title="Busca resumida para visitantes disponível em breve (Spec 14)"
+        <a
+          href="{% url 'medicamentos:busca' %}"
+          class="btn btn-outline-secondary fw-semibold d-inline-flex align-items-center justify-content-center px-4"
         >
-          <span>Continuar como visitante</span>
-          <span class="badge text-bg-secondary fw-normal">Em breve</span>
-        </span>
+          Continuar como visitante
+        </a>
       </div>
 
       <div class="remed-banner-info p-3" role="note">

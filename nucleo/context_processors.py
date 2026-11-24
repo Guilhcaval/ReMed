@@ -11,6 +11,13 @@ from nucleo.mixins import SESSAO_CHAVE_2FA_VERIFICADO
 from pontos_coleta.services import PontoColetaService
 
 MAPA_VIEW_SECAO: dict[str, str] = {
+    "medicamentos:busca": "medicamentos_busca",
+    "medicamentos:definir_localizacao": "medicamentos_busca",
+    "medicamentos:limpar_localizacao": "medicamentos_busca",
+    "medicamentos:minhas_doacoes": "minhas_doacoes",
+    "medicamentos:doacao_criar": "minhas_doacoes",
+    "medicamentos:doacao_editar": "minhas_doacoes",
+    "medicamentos:doacao_cancelar": "minhas_doacoes",
     "pontos_coleta:lista_publica": "pontos_publicos",
     "pontos_coleta:meus_pontos": "meus_pontos",
     "pontos_coleta:cadastrar": "meus_pontos",
@@ -40,6 +47,12 @@ MAPA_VIEW_SECAO: dict[str, str] = {
     "pontos_coleta:admin_situacao": "admin_pontos",
     "pontos_coleta:admin_revisar": "admin_pontos",
     "pontos_coleta:admin_documentos": "admin_documentos",
+    "medicamentos:admin_conferencia_lista": "admin_conferencia",
+    "medicamentos:admin_conferencia_detalhe": "admin_conferencia",
+    "medicamentos:admin_conferencia_registrar": "admin_conferencia",
+    "medicamentos:admin_conferencia_vencer": "admin_conferencia",
+    "medicamentos:admin_vencimento_parametros": "admin_vencimento_parametros",
+    "medicamentos:admin_vencimento_execucoes": "admin_vencimento_execucoes",
 }
 
 
@@ -90,6 +103,29 @@ def _montar_itens_admin(funcoes: frozenset[str]) -> tuple[ItemNavegacaoAdmin, ..
                 secao="admin_documentos",
             )
         )
+    if "conferencia_doacoes" in funcoes:
+        itens.append(
+            ItemNavegacaoAdmin(
+                rotulo="Conferência de doações",
+                url=reverse("medicamentos:admin_conferencia_lista"),
+                secao="admin_conferencia",
+            )
+        )
+    if "metricas_e_parametros" in funcoes:
+        itens.append(
+            ItemNavegacaoAdmin(
+                rotulo="Parâmetros de vencimento",
+                url=reverse("medicamentos:admin_vencimento_parametros"),
+                secao="admin_vencimento_parametros",
+            )
+        )
+        itens.append(
+            ItemNavegacaoAdmin(
+                rotulo="Execuções de vencimento",
+                url=reverse("medicamentos:admin_vencimento_execucoes"),
+                secao="admin_vencimento_execucoes",
+            )
+        )
     return tuple(itens)
 
 
@@ -103,6 +139,7 @@ def navegacao_global(request) -> dict:
     base_visitante = {
         "nav_autenticado": False,
         "nav_pendente_2fa": False,
+        "nav_exibir_minhas_doacoes": False,
         "nav_exibir_meus_pontos": False,
         "notificacoes_nao_lidas": 0,
         "nav_admin_itens": (),
@@ -120,6 +157,7 @@ def navegacao_global(request) -> dict:
         return {
             "nav_autenticado": True,
             "nav_pendente_2fa": True,
+            "nav_exibir_minhas_doacoes": False,
             "nav_exibir_meus_pontos": False,
             "notificacoes_nao_lidas": 0,
             "nav_admin_itens": (),
@@ -132,6 +170,7 @@ def navegacao_global(request) -> dict:
         return {
             "nav_autenticado": True,
             "nav_pendente_2fa": True,
+            "nav_exibir_minhas_doacoes": False,
             "nav_exibir_meus_pontos": False,
             "notificacoes_nao_lidas": 0,
             "nav_admin_itens": (),
@@ -144,6 +183,7 @@ def navegacao_global(request) -> dict:
     return {
         "nav_autenticado": True,
         "nav_pendente_2fa": False,
+        "nav_exibir_minhas_doacoes": bool(getattr(usuario, "perfil_doador", False)),
         "nav_exibir_meus_pontos": PontoColetaService.usuario_possui_vinculo_ou_convite(usuario),
         "notificacoes_nao_lidas": NotificacaoService.contar_nao_lidas(usuario.pk),
         "nav_admin_itens": itens_admin,

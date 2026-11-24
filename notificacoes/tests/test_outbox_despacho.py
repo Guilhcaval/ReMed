@@ -99,3 +99,32 @@ class OutboxDespachoTest(TestCase):
 
         self.assertEqual(len(mail.outbox), 0)
         self.assertEqual(ExecucaoRotina.objects.count(), 0)
+
+    def test_console_email_backend_nao_quebra_url_longa_com_quoted_printable(self):
+        """ConsoleEmailBackend exibe UTF-8 e URLs longas (> 76 chars) em linha única."""
+        from notificacoes.backends import ConsoleEmailBackend
+
+        stream = StringIO()
+        backend = ConsoleEmailBackend(stream=stream)
+        link = (
+            "http://127.0.0.1:8000/contas/confirmar-email/"
+            "DWIwG3KDTwHe49OcWljx4kkFscIwk3s-BAiYavhKXnM/"
+        )
+        mensagem = mail.EmailMessage(
+            subject="ReMed — Confirme seu e-mail",
+            body=(
+                "Olá,\n\nPara ativar ou confirmar seu e-mail no ReMed, acesse o link abaixo "
+                "(válido por tempo limitado e de uso único):\n\n"
+                f"{link}\n"
+            ),
+            from_email="nao-responda@remed.local",
+            to=["maria@exemplo.com"],
+        )
+        enviados = backend.send_messages([mensagem])
+        self.assertEqual(enviados, 1)
+
+        texto = stream.getvalue()
+        self.assertIn(link, texto)
+        self.assertIn("Olá,", texto)
+        self.assertNotIn("=\n", texto)
+        self.assertNotIn("=C3=", texto)

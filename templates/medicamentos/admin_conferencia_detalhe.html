@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}Conferir doação #{{ detalhe.doacao.pk }} · ReMed{% endblock %}
+
+{% block content %}
+  <div class="remed-admin-wrapper">
+    <section class="remed-card p-3 p-sm-4 p-md-5 shadow-sm" aria-labelledby="titulo-conf-detalhe">
+      <div class="mb-3">
+        <a href="{% url 'medicamentos:admin_conferencia_lista' %}" class="remed-cep-help-link">
+          &larr; Voltar para a fila de conferência
+        </a>
+      </div>
+
+      <header class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3 mb-4">
+        <div>
+          <h1 id="titulo-conf-detalhe" class="h3 fw-bold remed-auth-title mb-1">
+            {{ detalhe.doacao.nome_medicamento }} — {{ detalhe.doacao.concentracao_dosagem }}
+          </h1>
+          <p class="remed-hint mb-0">
+            Doação #{{ detalhe.doacao.pk }} · {{ detalhe.doacao.principio_ativo }} · {{ detalhe.doacao.forma_farmaceutica.nome }}
+          </p>
+        </div>
+        <span class="badge remed-status-badge remed-status-{{ detalhe.doacao.status }} px-3 py-2">
+          {{ detalhe.doacao.get_status_display }}
+        </span>
+      </header>
+
+      <div class="remed-banner-info p-3 mb-4 small" role="note">
+        <strong>Aviso RNF13:</strong> {{ aviso_rnf13 }}
+      </div>
+
+      <div class="row g-4 mb-4">
+        <div class="col-12 col-lg-7">
+          <div class="border rounded p-3 h-100 bg-white">
+            <h2 class="remed-section-title mb-3">Dados declarados</h2>
+            <dl class="row small mb-0 gy-2">
+              <dt class="col-5 text-secondary">Fabricante</dt>
+              <dd class="col-7 mb-0">{{ detalhe.doacao.fabricante }}</dd>
+              <dt class="col-5 text-secondary">Lote</dt>
+              <dd class="col-7 mb-0">{{ detalhe.doacao.lote }}</dd>
+              <dt class="col-5 text-secondary">Validade</dt>
+              <dd class="col-7 mb-0">
+                <strong>{{ detalhe.doacao.data_validade|date:"d/m/Y" }}</strong>
+                (mínimo vigente: {{ detalhe.validade_minima_dias }} dias)
+              </dd>
+              <dt class="col-5 text-secondary">Quantidade</dt>
+              <dd class="col-7 mb-0">{{ detalhe.doacao.quantidade_inicial }} unidade(s)</dd>
+              <dt class="col-5 text-secondary">Conservação</dt>
+              <dd class="col-7 mb-0">
+                {% if detalhe.doacao.condicao_conservacao == "refrigerado" %}
+                  <span class="badge remed-badge-refrigerado">Refrigerado</span>
+                  {% if detalhe.dados_refrigeracao %}
+                    <div class="mt-1">
+                      Faixa da bula: <strong>{{ detalhe.dados_refrigeracao.faixa_temperatura_bula }}</strong><br>
+                      Declaração confirmada em {{ detalhe.dados_refrigeracao.declaracao_doador_em|date:"d/m/Y H:i" }}.
+                    </div>
+                  {% endif %}
+                {% else %}
+                  Temperatura ambiente
+                {% endif %}
+              </dd>
+              <dt class="col-5 text-secondary">Sujeito a receita</dt>
+              <dd class="col-7 mb-0">{% if detalhe.doacao.sujeito_receita %}Sim{% else %}Não{% endif %}</dd>
+              {% if detalhe.doacao.observacoes %}
+                <dt class="col-5 text-secondary">Observações</dt>
+                <dd class="col-7 mb-0">{{ detalhe.doacao.observacoes }}</dd>
+              {% endif %}
+            </dl>
+          </div>
+        </div>
+
+        <div class="col-12 col-lg-5">
+          <div class="border rounded p-3 h-100 bg-white">
+            <h2 class="remed-section-title mb-3">Fotos da embalagem</h2>
+            <p class="remed-hint mb-3">Links temporários autenticados (60 s) com registro em auditoria.</p>
+            <div class="d-flex flex-column gap-2">
+              {% for foto in detalhe.fotos %}
+                <a
+                  href="{% url 'medicamentos:doacao_foto_acessar' foto_id=foto.pk %}"
+                  class="btn btn-outline-primary btn-sm d-inline-flex align-items-center justify-content-center"
+                >
+                  Abrir foto {{ foto.ordem }} ({{ foto.mime_verificado }})
+                </a>
+              {% empty %}
+                <p class="small text-secondary mb-0">Nenhuma foto vinculada.</p>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="remed-banner-neutral p-3 mb-4">
+        <h2 class="h6 fw-bold mb-2">Checklist orientativo de conferência (Questão 4 do PRD)</h2>
+        <ul class="small mb-0 ps-3">
+          {% for item in detalhe.checklist_orientativo %}
+            <li>{{ item }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      {% if detalhe.doacao.status == "em_analise" %}
+        {% if not detalhe.dentro_validade_minima %}
+          <div class="remed-error-summary p-3 mb-4" role="alert">
+            <p class="fw-semibold mb-2">
+              A doação está vencida ou abaixo da validade mínima restante configurada ({{ detalhe.validade_minima_dias }} dias) e não pode ser aprovada.
+            </p>
+            <form method="post" action="{% url 'medicamentos:admin_conferencia_vencer' doacao_id=detalhe.doacao.pk %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-danger btn-sm">
+                Marcar como vencida (notificar descarte sanitário)
+              </button>
+            </form>
+          </div>
+        {% endif %}
+
+        <form
+          method="post"
+          action="{% url 'medicamentos:admin_conferencia_registrar' doacao_id=detalhe.doacao.pk %}"
+          class="border rounded p-3 p-md-4 bg-light mb-4"
+          novalidate
+        >
+          {% csrf_token %}
+          <h2 class="remed-section-title mb-3">Registrar conferência</h2>
+
+          <div class="mb-3">
+            <span class="form-label fw-medium d-block">{{ form.resultado.label }}</span>
+            <div class="d-flex gap-4">
+              {% for radio in form.resultado %}
+                <div class="form-check remed-check-touch">
+                  {{ radio.tag }}
+                  <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="{{ form.motivo.id_for_label }}" class="form-label fw-medium">{{ form.motivo.label }}</label>
+            {{ form.motivo }}
+            <div class="remed-hint mt-2">
+              Motivos orientativos frequentes:
+              {{ detalhe.motivos_orientativos|join:" · " }}.
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary fw-semibold px-4">
+            Registrar conferência
+          </button>
+        </form>
+      {% endif %}
+
+      {% if detalhe.conferencias %}
+        <div>
+          <h2 class="remed-section-title mb-3">Histórico imutável de conferências</h2>
+          <ul class="list-unstyled d-flex flex-column gap-2 mb-0">
+            {% for conf in detalhe.conferencias %}
+              <li class="border rounded p-3 bg-white small">
+                <div class="d-flex justify-content-between align-items-center gap-2 mb-1">
+                  <span class="badge remed-status-badge {% if conf.resultado == 'aprovada' %}remed-status-aprovado{% else %}remed-status-reprovado{% endif %}">
+                    {{ conf.get_resultado_display }}
+                  </span>
+                  <span class="text-secondary">{{ conf.conferido_em|date:"d/m/Y H:i" }}</span>
+                </div>
+                {% if conf.motivo %}
+                  <p class="mb-0 mt-1"><strong>Motivo:</strong> {{ conf.motivo }}</p>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+    </section>
+  </div>
+{% endblock %}

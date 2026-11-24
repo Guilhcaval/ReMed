@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}Minhas doações · ReMed{% endblock %}
+
+{% block content %}
+  <div class="remed-admin-wrapper">
+    <section class="remed-card p-3 p-sm-4 p-md-5 shadow-sm" aria-labelledby="titulo-minhas-doacoes">
+      <header class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+          <h1 id="titulo-minhas-doacoes" class="h3 fw-bold remed-auth-title mb-1">Minhas doações</h1>
+          <p class="remed-hint mb-0">
+            Acompanhe o status da conferência, edite dados enquanto em análise ou disponível e gerencie suas ofertas.
+          </p>
+        </div>
+        <a href="{% url 'medicamentos:doacao_criar' %}" class="btn remed-btn-accent fw-semibold d-inline-flex align-items-center justify-content-center px-3">
+          Cadastrar nova doação
+        </a>
+      </header>
+
+      <form method="get" action="{% url 'medicamentos:minhas_doacoes' %}" class="border rounded p-3 mb-4 bg-light" novalidate>
+        <div class="row g-3">
+          <div class="col-12 col-md-4">
+            <label for="{{ form.termo.id_for_label }}" class="form-label fw-medium">{{ form.termo.label }}</label>
+            {{ form.termo }}
+          </div>
+          <div class="col-12 col-md-3">
+            <label for="{{ form.status.id_for_label }}" class="form-label fw-medium">{{ form.status.label }}</label>
+            {{ form.status }}
+          </div>
+          <div class="col-12 col-md-2">
+            <label for="{{ form.data_inicio.id_for_label }}" class="form-label fw-medium">{{ form.data_inicio.label }}</label>
+            {{ form.data_inicio }}
+          </div>
+          <div class="col-12 col-md-3">
+            <label for="{{ form.data_fim.id_for_label }}" class="form-label fw-medium">{{ form.data_fim.label }}</label>
+            {{ form.data_fim }}
+          </div>
+        </div>
+        <div class="d-flex flex-wrap gap-2 mt-3">
+          <button type="submit" class="btn btn-primary btn-sm px-3">Filtrar</button>
+          <a href="{% url 'medicamentos:minhas_doacoes' %}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center">
+            Limpar
+          </a>
+        </div>
+      </form>
+
+      {% if pagina.object_list %}
+        <div class="d-flex flex-column gap-3 mb-4">
+          {% for doacao in pagina.object_list %}
+            <article class="border rounded p-3 p-md-4 bg-white">
+              <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-2 mb-2">
+                <div>
+                  <h2 class="h5 fw-bold mb-1">
+                    {{ doacao.nome_medicamento }} — {{ doacao.concentracao_dosagem }}
+                  </h2>
+                  <p class="small text-secondary mb-0">
+                    {{ doacao.principio_ativo }} · {{ doacao.forma_farmaceutica.nome }} ·
+                    Lote {{ doacao.lote }} · Validade {{ doacao.data_validade|date:"d/m/Y" }} ·
+                    Qtd. {{ doacao.quantidade_disponivel }}/{{ doacao.quantidade_inicial }}
+                  </p>
+                </div>
+                <span class="badge remed-status-badge remed-status-{{ doacao.status }} px-3 py-2">
+                  {{ doacao.get_status_display }}
+                </span>
+              </div>
+
+              <div class="d-flex flex-wrap gap-2 mb-3">
+                {% if doacao.condicao_conservacao == "refrigerado" %}
+                  <span class="badge remed-badge-refrigerado">Refrigerado</span>
+                {% endif %}
+                {% if doacao.sujeito_receita %}
+                  <span class="badge remed-badge-receita">Exige receita</span>
+                {% endif %}
+                {% for foto in doacao.fotos.all %}
+                  <a href="{% url 'medicamentos:doacao_foto_acessar' foto_id=foto.pk %}" class="small text-decoration-underline align-self-center">
+                    Foto {{ foto.ordem }}
+                  </a>
+                {% endfor %}
+              </div>
+
+              {% if doacao.status == "reprovado" %}
+                {% with ultima=doacao.conferencias.all.0 %}
+                  {% if ultima and ultima.motivo %}
+                    <p class="small border-start border-3 border-danger ps-3 mb-3">
+                      <strong>Motivo da reprovação:</strong> {{ ultima.motivo }}
+                    </p>
+                  {% endif %}
+                {% endwith %}
+              {% endif %}
+
+              <div class="d-flex flex-wrap gap-2 align-items-center">
+                {% if doacao.status == "em_analise" or doacao.status == "disponivel" %}
+                  <a
+                    href="{% url 'medicamentos:doacao_editar' doacao_id=doacao.pk %}"
+                    class="btn btn-outline-primary btn-sm d-inline-flex align-items-center"
+                  >
+                    Editar doação
+                  </a>
+                {% endif %}
+
+                {% if doacao.status != "entregue" and doacao.status != "vencido" and doacao.status != "cancelado" %}
+                  <form
+                    method="post"
+                    action="{% url 'medicamentos:doacao_cancelar' doacao_id=doacao.pk %}"
+                    class="d-inline-flex flex-wrap align-items-center gap-2 ms-md-auto"
+                  >
+                    {% csrf_token %}
+                    <div class="form-check mb-0">
+                      <input
+                        class="form-check-input"
+                        type="checkbox"
+                        name="confirmar_cancelamento"
+                        value="sim"
+                        id="id_cancelar_{{ doacao.pk }}"
+                        required
+                      >
+                      <label class="form-check-label small" for="id_cancelar_{{ doacao.pk }}">
+                        Confirmar cancelamento
+                      </label>
+                    </div>
+                    <button type="submit" class="btn btn-outline-danger btn-sm">Cancelar doação</button>
+                  </form>
+                {% endif %}
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+
+        {% if pagina.has_other_pages %}
+          <nav aria-label="Paginação de minhas doações">
+            <ul class="pagination justify-content-center mb-0">
+              {% if pagina.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ pagina.previous_page_number }}">Anterior</a>
+                </li>
+              {% endif %}
+              <li class="page-item disabled">
+                <span class="page-link">Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+              </li>
+              {% if pagina.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ pagina.next_page_number }}">Próxima</a>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+        {% endif %}
+      {% else %}
+        <div class="text-center py-4 border rounded bg-light">
+          <p class="fw-medium mb-2">Nenhuma doação encontrada.</p>
+          <a href="{% url 'medicamentos:doacao_criar' %}" class="btn btn-primary btn-sm d-inline-flex align-items-center">
+            Cadastrar primeira doação
+          </a>
+        </div>
+      {% endif %}
+    </section>
+  </div>
+{% endblock %}

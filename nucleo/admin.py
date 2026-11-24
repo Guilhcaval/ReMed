@@ -1,6 +1,19 @@
 from django.contrib import admin
 
-from nucleo.models import CacheCep, ExecucaoRotina, TipoDocumentoPonto, TipoEstabelecimento
+from nucleo.models import (
+    CacheCep,
+    ExecucaoRotina,
+    FormaFarmaceutica,
+    TipoDocumentoPonto,
+    TipoEstabelecimento,
+)
+
+
+@admin.register(FormaFarmaceutica)
+class FormaFarmaceuticaAdmin(admin.ModelAdmin):
+    list_display = ("id", "nome", "ativo")
+    list_filter = ("ativo",)
+    search_fields = ("nome",)
 
 
 @admin.register(TipoEstabelecimento)

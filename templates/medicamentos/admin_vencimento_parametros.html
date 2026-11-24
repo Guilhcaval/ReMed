@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Parâmetros de vencimento · Administração · ReMed{% endblock %}
+
+{% block content %}
+  <div class="remed-auth-wrapper">
+    <section class="remed-card p-3 p-sm-4 p-md-5 shadow-sm" aria-labelledby="titulo-param-venc">
+      <header class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+          <h1 id="titulo-param-venc" class="h3 fw-bold remed-auth-title mb-1">
+            Parâmetros da rotina de vencimento
+          </h1>
+          <p class="remed-hint mb-0">
+            Alterações são registradas em auditoria e passam a valer na próxima execução diária automática.
+          </p>
+        </div>
+        <a href="{% url 'medicamentos:admin_vencimento_execucoes' %}" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center">
+          Ver histórico de execuções
+        </a>
+      </header>
+
+      <div class="remed-banner-neutral p-3 mb-4 small" role="note">
+        <strong>Nota (Questão 4 do PRD):</strong> o valor inicial de 30 dias para validade mínima restante é provisório e configurável aqui sem alteração de código.
+      </div>
+
+      {% if form.errors %}
+        <div class="remed-error-summary p-3 mb-4" role="alert" aria-live="polite">
+          <ul class="mb-0 ps-3 small">
+            {% for erros in form.errors.values %}
+              {% for erro in erros %}
+                <li>{{ erro }}</li>
+              {% endfor %}
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      <form method="post" action="{% url 'medicamentos:admin_vencimento_parametros' %}" novalidate>
+        {% csrf_token %}
+        <div class="mb-3">
+          <label for="{{ form.validade_minima_restante_dias.id_for_label }}" class="form-label fw-medium">
+            {{ form.validade_minima_restante_dias.label }}
+          </label>
+          {{ form.validade_minima_restante_dias }}
+          <div class="remed-hint mt-1">
+            Doações com validade abaixo deste número de dias passam automaticamente para Vencido.
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label for="{{ form.antecedencia_aviso_dias.id_for_label }}" class="form-label fw-medium">
+            {{ form.antecedencia_aviso_dias.label }}
+          </label>
+          {{ form.antecedencia_aviso_dias }}
+          <div class="remed-hint mt-1">
+            Aviso prévio enviado uma única vez ao doador antes da data de corte.
+          </div>
+        </div>
+
+        <p class="remed-hint mb-4">
+          Última atualização: {{ parametros.atualizado_em|date:"d/m/Y H:i" }}.
+        </p>
+
+        <button type="submit" class="btn btn-primary fw-semibold px-4">
+          Salvar parâmetros
+        </button>
+      </form>
+    </section>
+  </div>
+{% endblock %}

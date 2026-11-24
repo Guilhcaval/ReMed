@@ -35,7 +35,7 @@
         {% else %}
           <a
             class="navbar-brand d-inline-flex align-items-center py-1 remed-brand"
-            href="{% if nav_autenticado %}{% url 'contas:perfil_editar' %}{% else %}{% url 'pontos_coleta:lista_publica' %}{% endif %}"
+            href="{% url 'medicamentos:busca' %}"
             aria-label="ReMed — Página inicial"
           >
             <img
@@ -61,6 +61,26 @@
           <div class="collapse navbar-collapse" id="remedNavbar">
             {% if nav_autenticado %}
               <ul class="navbar-nav me-auto ms-lg-3 align-items-lg-center gap-1">
+                <li class="nav-item">
+                  <a
+                    class="nav-link remed-nav-link{% if nav_secao_ativa == 'medicamentos_busca' %} active{% endif %}"
+                    {% if nav_secao_ativa == 'medicamentos_busca' %}aria-current="page"{% endif %}
+                    href="{% url 'medicamentos:busca' %}"
+                  >
+                    Medicamentos
+                  </a>
+                </li>
+                {% if nav_exibir_minhas_doacoes %}
+                  <li class="nav-item">
+                    <a
+                      class="nav-link remed-nav-link{% if nav_secao_ativa == 'minhas_doacoes' %} active{% endif %}"
+                      {% if nav_secao_ativa == 'minhas_doacoes' %}aria-current="page"{% endif %}
+                      href="{% url 'medicamentos:minhas_doacoes' %}"
+                    >
+                      Minhas doações
+                    </a>
+                  </li>
+                {% endif %}
                 <li class="nav-item">
                   <a
                     class="nav-link remed-nav-link{% if nav_secao_ativa == 'pontos_publicos' %} active{% endif %}"
@@ -140,6 +160,15 @@
               </ul>
             {% else %}
               <ul class="navbar-nav ms-auto align-items-lg-center gap-1 gap-lg-2">
+                <li class="nav-item">
+                  <a
+                    class="nav-link remed-nav-link{% if nav_secao_ativa == 'medicamentos_busca' %} active{% endif %}"
+                    {% if nav_secao_ativa == 'medicamentos_busca' %}aria-current="page"{% endif %}
+                    href="{% url 'medicamentos:busca' %}"
+                  >
+                    Medicamentos
+                  </a>
+                </li>
                 <li class="nav-item">
                   <a
                     class="nav-link remed-nav-link{% if nav_secao_ativa == 'pontos_publicos' %} active{% endif %}"

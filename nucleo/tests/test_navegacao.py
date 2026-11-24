@@ -203,6 +203,7 @@ class NavegacaoGlobalTest(TestCase):
         with self.assertNumQueries(0):
             ctx_anon = navegacao_global(req_anon)
         self.assertFalse(ctx_anon["nav_autenticado"])
+        self.assertFalse(ctx_anon["nav_exibir_minhas_doacoes"])
         self.assertFalse(ctx_anon["nav_exibir_meus_pontos"])
         self.assertEqual(ctx_anon["notificacoes_nao_lidas"], 0)
         self.assertEqual(ctx_anon["nav_admin_itens"], ())
@@ -219,6 +220,7 @@ class NavegacaoGlobalTest(TestCase):
         with self.assertNumQueries(0):
             ctx_inativo = navegacao_global(req_inativo)
         self.assertFalse(ctx_inativo["nav_autenticado"])
+        self.assertFalse(ctx_inativo["nav_exibir_minhas_doacoes"])
         self.assertFalse(ctx_inativo["nav_exibir_meus_pontos"])
         self.assertEqual(ctx_inativo["notificacoes_nao_lidas"], 0)
 
@@ -234,6 +236,7 @@ class NavegacaoGlobalTest(TestCase):
         with self.assertNumQueries(0):
             ctx_nao_conf = navegacao_global(req_nao_conf)
         self.assertFalse(ctx_nao_conf["nav_autenticado"])
+        self.assertFalse(ctx_nao_conf["nav_exibir_minhas_doacoes"])
         self.assertFalse(ctx_nao_conf["nav_exibir_meus_pontos"])
 
         # 4. Conta anonimizada -> 0 queries
@@ -244,6 +247,7 @@ class NavegacaoGlobalTest(TestCase):
         with self.assertNumQueries(0):
             ctx_anonim = navegacao_global(req_anonim)
         self.assertFalse(ctx_anonim["nav_autenticado"])
+        self.assertFalse(ctx_anonim["nav_exibir_minhas_doacoes"])
         self.assertFalse(ctx_anonim["nav_exibir_meus_pontos"])
 
         # 5. Conta administrativa pendente de 2FA -> 0 queries
@@ -260,24 +264,26 @@ class NavegacaoGlobalTest(TestCase):
             ctx_pend = navegacao_global(req_pend_2fa)
         self.assertTrue(ctx_pend["nav_autenticado"])
         self.assertTrue(ctx_pend["nav_pendente_2fa"])
+        self.assertFalse(ctx_pend["nav_exibir_minhas_doacoes"])
         self.assertFalse(ctx_pend["nav_exibir_meus_pontos"])
         self.assertEqual(ctx_pend["notificacoes_nao_lidas"], 0)
         self.assertEqual(ctx_pend["nav_admin_itens"], ())
 
     def test_barra_visitante_identica_entre_rotas_e_estado_ativo(self):
         rotas_esperadas = [
+            (reverse("medicamentos:busca"), "Medicamentos"),
             (reverse("pontos_coleta:lista_publica"), "Pontos de coleta"),
             (reverse("contas:login"), "Entrar"),
             (reverse("contas:cadastro"), "Criar conta"),
         ]
-        ordem_esperada = ["Pontos de coleta", "Entrar", "Criar conta"]
+        ordem_esperada = ["Medicamentos", "Pontos de coleta", "Entrar", "Criar conta"]
 
         for url, ativo_esperado in rotas_esperadas:
             with self.subTest(url=url):
                 resp = self.client.get(url)
                 self.assertEqual(resp.status_code, 200)
                 nav = _extrair_navbar(resp)
-                self.assertEqual(nav.brand_href, reverse("pontos_coleta:lista_publica"))
+                self.assertEqual(nav.brand_href, reverse("medicamentos:busca"))
                 self.assertEqual([item["texto"] for item in nav.links], ordem_esperada)
                 ativos = [item["texto"] for item in nav.links if item["aria_current"] == "page"]
                 self.assertEqual(ativos, [ativo_esperado])
@@ -293,6 +299,8 @@ class NavegacaoGlobalTest(TestCase):
         self._logar(cidadao)
 
         rotas_esperadas = [
+            (reverse("medicamentos:busca"), [reverse("medicamentos:busca")]),
+            (reverse("medicamentos:minhas_doacoes"), [reverse("medicamentos:minhas_doacoes")]),
             (reverse("pontos_coleta:lista_publica"), [reverse("pontos_coleta:lista_publica")]),
             (reverse("pontos_coleta:cadastrar"), []),
             (reverse("pontos_coleta:meus_pontos"), []),
@@ -300,11 +308,15 @@ class NavegacaoGlobalTest(TestCase):
             (reverse("contas:perfil_editar"), [reverse("contas:perfil_editar")]),
         ]
         hrefs_esperados = [
+            reverse("medicamentos:busca"),
+            reverse("medicamentos:minhas_doacoes"),
             reverse("pontos_coleta:lista_publica"),
             reverse("notificacoes:lista"),
             reverse("contas:perfil_editar"),
         ]
         textos_esperados = [
+            "Medicamentos",
+            "Minhas doações",
             "Pontos de coleta",
             "Notificações 1 não lidas",
             "Meu perfil",
@@ -315,7 +327,7 @@ class NavegacaoGlobalTest(TestCase):
                 resp = self.client.get(url)
                 self.assertEqual(resp.status_code, 200)
                 nav = _extrair_navbar(resp)
-                self.assertEqual(nav.brand_href, reverse("contas:perfil_editar"))
+                self.assertEqual(nav.brand_href, reverse("medicamentos:busca"))
                 self.assertEqual([item["href"] for item in nav.links], hrefs_esperados)
                 self.assertEqual([item["texto"] for item in nav.links], textos_esperados)
                 self.assertNotIn("Meus pontos", [item["texto"] for item in nav.links])
@@ -323,6 +335,15 @@ class NavegacaoGlobalTest(TestCase):
                 self.assertEqual(ativos, ativos_esperados)
                 self.assertNotIn("Administração", [b["texto"] for b in nav.botoes])
                 self.assertIn("Sair", [b["texto"] for b in nav.botoes])
+
+        # Solicitante sem perfil Doador não vê "Minhas doações"
+        so_solicitante = self._criar_usuario(email="sol@exemplo.com", cpf="11144477735")
+        so_solicitante.perfil_doador = False
+        so_solicitante.perfil_solicitante = True
+        so_solicitante.save(update_fields=["perfil_doador", "perfil_solicitante"])
+        self._logar(so_solicitante)
+        nav_sol = _extrair_navbar(self.client.get(reverse("medicamentos:busca")))
+        self.assertNotIn("Minhas doações", [i["texto"] for i in nav_sol.links])
 
     def test_barra_exibe_meus_pontos_para_vinculo_ativo_e_convite_pendente_na_mesma_ordem(self):
         responsavel_ativo = self._criar_usuario(email="resp-ativo@exemplo.com", cpf="52998224725")
@@ -340,18 +361,23 @@ class NavegacaoGlobalTest(TestCase):
         )
 
         hrefs_esperados = [
+            reverse("medicamentos:busca"),
+            reverse("medicamentos:minhas_doacoes"),
             reverse("pontos_coleta:lista_publica"),
             reverse("pontos_coleta:meus_pontos"),
             reverse("notificacoes:lista"),
             reverse("contas:perfil_editar"),
         ]
         textos_esperados = [
+            "Medicamentos",
+            "Minhas doações",
             "Pontos de coleta",
             "Meus pontos",
             "Notificações",
             "Meu perfil",
         ]
         rotas_esperadas = [
+            (reverse("medicamentos:busca"), reverse("medicamentos:busca")),
             (reverse("pontos_coleta:lista_publica"), reverse("pontos_coleta:lista_publica")),
             (reverse("pontos_coleta:meus_pontos"), reverse("pontos_coleta:meus_pontos")),
             (reverse("pontos_coleta:cadastrar"), reverse("pontos_coleta:meus_pontos")),
@@ -389,12 +415,18 @@ class NavegacaoGlobalTest(TestCase):
         admin_completo = self._criar_usuario(
             email="adm-full@exemplo.com",
             cpf="52998224725",
-            funcoes=("gestao_usuarios", "aprovacao_pontos_coleta"),
+            funcoes=(
+                "gestao_usuarios",
+                "aprovacao_pontos_coleta",
+                "conferencia_doacoes",
+                "metricas_e_parametros",
+            ),
             ativar_totp=True,
         )
         self._logar(admin_completo, verificado_2fa=True)
 
         rotas_esperadas = [
+            (reverse("medicamentos:busca"), [reverse("medicamentos:busca")], False),
             (
                 reverse("pontos_coleta:lista_publica"),
                 [reverse("pontos_coleta:lista_publica")],
@@ -414,13 +446,33 @@ class NavegacaoGlobalTest(TestCase):
                 [reverse("pontos_coleta:admin_documentos")],
                 True,
             ),
+            (
+                reverse("medicamentos:admin_conferencia_lista"),
+                [reverse("medicamentos:admin_conferencia_lista")],
+                True,
+            ),
+            (
+                reverse("medicamentos:admin_vencimento_parametros"),
+                [reverse("medicamentos:admin_vencimento_parametros")],
+                True,
+            ),
+            (
+                reverse("medicamentos:admin_vencimento_execucoes"),
+                [reverse("medicamentos:admin_vencimento_execucoes")],
+                True,
+            ),
         ]
         ordem_esperada = [
+            "Medicamentos",
+            "Minhas doações",
             "Pontos de coleta",
             "Notificações",
             "Gestão de usuários",
             "Aprovação de pontos",
             "Documentos de pontos",
+            "Conferência de doações",
+            "Parâmetros de vencimento",
+            "Execuções de vencimento",
             "Meu perfil",
         ]
 
@@ -429,6 +481,7 @@ class NavegacaoGlobalTest(TestCase):
                 resp = self.client.get(url)
                 self.assertEqual(resp.status_code, 200)
                 nav = _extrair_navbar(resp)
+                self.assertEqual(nav.brand_href, reverse("medicamentos:busca"))
                 self.assertEqual([item["texto"] for item in nav.links], ordem_esperada)
                 ativos = [item["href"] for item in nav.links if item["aria_current"] == "page"]
                 self.assertEqual(ativos, ativos_esperados)
@@ -447,12 +500,17 @@ class NavegacaoGlobalTest(TestCase):
         self.assertEqual(
             [item["texto"] for item in nav_admin_vinculado.links],
             [
+                "Medicamentos",
+                "Minhas doações",
                 "Pontos de coleta",
                 "Meus pontos",
                 "Notificações",
                 "Gestão de usuários",
                 "Aprovação de pontos",
                 "Documentos de pontos",
+                "Conferência de doações",
+                "Parâmetros de vencimento",
+                "Execuções de vencimento",
                 "Meu perfil",
             ],
         )
@@ -470,6 +528,8 @@ class NavegacaoGlobalTest(TestCase):
         self.assertIn("Gestão de usuários", textos_u)
         self.assertNotIn("Aprovação de pontos", textos_u)
         self.assertNotIn("Documentos de pontos", textos_u)
+        self.assertNotIn("Conferência de doações", textos_u)
+        self.assertNotIn("Parâmetros de vencimento", textos_u)
 
     def test_is_superuser_sem_funcao_e_admin_pendente_2fa_nao_veem_dropdown_administracao(self):
         # 1. is_superuser sem função explícita + 2FA -> sem dropdown Administração (ADR 0010)

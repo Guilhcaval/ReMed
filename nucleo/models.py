@@ -94,3 +94,18 @@ class TipoDocumentoPonto(models.Model):
 
     def __str__(self) -> str:
         return self.nome
+
+
+class FormaFarmaceutica(models.Model):
+    """Cadastro auxiliar de formas farmacêuticas de medicamentos (RF008 / RN-08-01)."""
+
+    nome = models.CharField(max_length=80, unique=True)
+    ativo = models.BooleanField(default=True, db_index=True)
+
+    class Meta:
+        verbose_name = "Forma farmacêutica"
+        verbose_name_plural = "Formas farmacêuticas"
+        ordering = ["id"]
+
+    def __str__(self) -> str:
+        return self.nome

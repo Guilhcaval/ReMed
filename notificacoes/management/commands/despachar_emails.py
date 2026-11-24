@@ -85,6 +85,16 @@ class Command(BaseCommand):
                     enviar_email=False,
                 )
 
+            if settings.DEBUG and resultado.links_confirmacao_dev:
+                self.stdout.write("")
+                self.stdout.write(
+                    "[DEV] Links de confirmação de e-mail (linha única, sem quebra "
+                    "quoted-printable):"
+                )
+                for link in resultado.links_confirmacao_dev:
+                    self.stdout.write(f"  {link}")
+                self.stdout.write("")
+
             self.stdout.write(
                 "Despacho concluído: "
                 f"processados={resultado.processados}, "

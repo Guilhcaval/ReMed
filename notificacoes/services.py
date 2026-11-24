@@ -1,5 +1,6 @@
 """Camada de services do app notificacoes (Spec 03 / RF017 — ADR 0015)."""
 
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
@@ -25,6 +26,7 @@ from nucleo.exceptions import RecursoNaoEncontrado, RegraNegocioViolada
 MAX_TENTATIVAS_ENVIO_EMAIL = 4  # 1 tentativa inicial + 3 novas tentativas (Spec 03 / RNF15)
 INTERVALO_RETENTATIVA_MINUTOS = 1  # Backoff fixo de 1 min cabendo nos 5 min do RNF15
 NOTIFICACOES_POR_PAGINA = 20  # Acréscimo da especificação (Spec 03 / RN-03-07)
+_REGEX_URL_CONFIRMACAO = re.compile(r"https?://[^\s]+/contas/confirmar-email/[^\s]+")
 
 TIPOS_CRITICOS_SEGURANCA: frozenset[str] = frozenset(
     {
@@ -180,7 +182,9 @@ CATALOGO_NOTIFICACOES: dict[str, _DefinicaoTemplate] = {
         assunto="ReMed — Doação vencida removida da busca",
         mensagem=(
             "A doação de {medicamento} atingiu o limite de validade e foi retirada "
-            "automaticamente da busca por segurança sanitária."
+            "automaticamente da busca por segurança sanitária. "
+            "Descarte medicamentos vencidos em pontos de coleta de descarte farmacêutico, "
+            "conforme a legislação sanitária."
         ),
         chaves_permitidas=frozenset({"medicamento"}),
     ),
@@ -255,6 +259,7 @@ class ResultadoDespachoOutbox:
     enviados: int
     reagendados: int
     falhas_definitivas: int
+    links_confirmacao_dev: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -348,6 +353,18 @@ class NotificacaoService:
             status=StatusOutboxEmail.PENDENTE,
             tentativas=0,
             proxima_tentativa_em=agora,
+        )
+
+    @staticmethod
+    def suprimir_emails_confirmacao_pendentes(destinatario) -> int:
+        """Suprime e-mails de confirmação pendentes substituídos por novo token."""
+        return OutboxEmail.objects.filter(
+            destinatario=destinatario,
+            tipo=TipoNotificacao.CONFIRMACAO_EMAIL,
+            status=StatusOutboxEmail.PENDENTE,
+        ).update(
+            status=StatusOutboxEmail.SUPRIMIDA,
+            erro_ultimo="Substituído por novo link de confirmação.",
         )
 
     @staticmethod
@@ -496,6 +513,7 @@ class NotificacaoService:
         enviados = 0
         reagendados = 0
         falhas_definitivas = 0
+        links_confirmacao_dev: list[str] = []
 
         for item_id in ids_lote:
             with transaction.atomic():
@@ -551,6 +569,10 @@ class NotificacaoService:
                         item.notificacao.status = StatusNotificacao.ENVIADA
                         item.notificacao.enviada_em = momento_envio
                         item.notificacao.save(update_fields=["status", "enviada_em"])
+                    if settings.DEBUG and item.tipo == TipoNotificacao.CONFIRMACAO_EMAIL:
+                        links_confirmacao_dev.extend(
+                            _REGEX_URL_CONFIRMACAO.findall(item.corpo_texto or "")
+                        )
                     enviados += 1
 
         return ResultadoDespachoOutbox(
@@ -558,6 +580,7 @@ class NotificacaoService:
             enviados=enviados,
             reagendados=reagendados,
             falhas_definitivas=falhas_definitivas,
+            links_confirmacao_dev=tuple(links_confirmacao_dev),
         )
 
     @staticmethod

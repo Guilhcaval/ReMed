@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Execuções da rotina de vencimento · Administração · ReMed{% endblock %}
+
+{% block content %}
+  <div class="remed-admin-wrapper">
+    <section class="remed-card p-3 p-sm-4 p-md-5 shadow-sm" aria-labelledby="titulo-exec-venc">
+      <header class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+          <h1 id="titulo-exec-venc" class="h3 fw-bold remed-auth-title mb-1">
+            Histórico de execuções da rotina de vencimento
+          </h1>
+          <p class="remed-hint mb-0">
+            Registro imutável das execuções diárias de <code>verificar_vencimento_doacoes</code>.
+          </p>
+        </div>
+        <a href="{% url 'medicamentos:admin_vencimento_parametros' %}" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center">
+          Configurar parâmetros
+        </a>
+      </header>
+
+      {% if pagina.object_list %}
+        <div class="table-responsive mb-3">
+          <table class="table align-middle small">
+            <thead>
+              <tr>
+                <th>Executado em</th>
+                <th>Tentativa</th>
+                <th>Resultado</th>
+                <th>Verificadas</th>
+                <th>Vencidas</th>
+                <th>Cancelamentos</th>
+                <th>Notificações</th>
+                <th>Resumo técnico</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for exec in pagina.object_list %}
+                <tr>
+                  <td>{{ exec.executado_em|date:"d/m/Y H:i" }}</td>
+                  <td>#{{ exec.execucao_rotina.tentativa }}</td>
+                  <td>
+                    <span class="badge remed-status-badge remed-status-{{ exec.resultado }}">
+                      {{ exec.get_resultado_display }}
+                    </span>
+                  </td>
+                  <td>{{ exec.doacoes_verificadas }}</td>
+                  <td>{{ exec.doacoes_marcadas_vencidas }}</td>
+                  <td>{{ exec.reservas_agendamentos_cancelados }}</td>
+                  <td>{{ exec.notificacoes_enviadas }}</td>
+                  <td>{{ exec.resumo_erro|default:"—" }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if pagina.has_other_pages %}
+          <nav aria-label="Paginação de execuções">
+            <ul class="pagination justify-content-center mb-0">
+              {% if pagina.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ pagina.previous_page_number }}">Anterior</a>
+                </li>
+              {% endif %}
+              <li class="page-item disabled">
+                <span class="page-link">Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+              </li>
+              {% if pagina.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ pagina.next_page_number }}">Próxima</a>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+        {% endif %}
+      {% else %}
+        <div class="text-center py-4 border rounded bg-light">
+          <p class="fw-medium mb-0">Nenhuma execução da rotina registrada até o momento.</p>
+        </div>
+      {% endif %}
+    </section>
+  </div>
+{% endblock %}

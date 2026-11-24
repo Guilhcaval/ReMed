@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Medicamentos disponíveis · ReMed{% endblock %}
+
+{% block content %}
+  <div class="remed-admin-wrapper">
+    <section class="remed-card p-3 p-sm-4 p-md-5 shadow-sm" aria-labelledby="titulo-busca-medicamentos">
+      <header class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+          <h1 id="titulo-busca-medicamentos" class="h3 fw-bold remed-auth-title mb-1">
+            Medicamentos disponíveis para doação
+          </h1>
+          <p class="remed-hint mb-0">
+            Consulte doações conferidas e dentro da validade. Dados pessoais do doador e o local de retirada não são exibidos na busca.
+          </p>
+        </div>
+        <span class="badge remed-badge-read px-3 py-2 align-self-start align-self-md-center">
+          {{ total_encontrados }} medicamento(s) encontrado(s)
+        </span>
+      </header>
+
+      <div class="remed-banner-neutral p-3 mb-4" role="region" aria-label="Localização aproximada para busca">
+        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+          <div>
+            <strong class="d-block small">Localização aproximada (opcional)</strong>
+            {% if localizacao_atual %}
+              <p class="small mb-0">
+                Ordenando por proximidade a partir de:
+                <strong>{{ localizacao_atual.rotulo_aproximado }}</strong>.
+                <span class="remed-hint d-block d-sm-inline">
+                  Salva apenas nesta sessão, sem histórico de trajetos.
+                </span>
+              </p>
+            {% else %}
+              <p class="small mb-0">
+                Informe seu CEP ou autorize a localização no navegador para ordenar do mais próximo ao mais distante.
+              </p>
+            {% endif %}
+          </div>
+
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <form method="post" action="{% url 'medicamentos:definir_localizacao' %}" class="d-flex flex-wrap align-items-center gap-2 mb-0">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <label for="{{ form_localizacao.cep.id_for_label }}" class="visually-hidden">CEP para proximidade</label>
+              {{ form_localizacao.cep }}
+              <button type="submit" class="btn btn-outline-secondary btn-sm px-3">Usar CEP</button>
+            </form>
+
+            <form id="form-localizacao-gps" method="post" action="{% url 'medicamentos:definir_localizacao' %}" class="mb-0">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <input type="hidden" name="latitude" id="id_gps_latitude" value="">
+              <input type="hidden" name="longitude" id="id_gps_longitude" value="">
+              <button
+                type="button"
+                id="btn-usar-localizacao"
+                class="btn btn-outline-primary btn-sm px-3"
+              >
+                Usar minha localização atual
+              </button>
+            </form>
+
+            {% if localizacao_atual %}
+              <form method="post" action="{% url 'medicamentos:limpar_localizacao' %}" class="mb-0">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="btn btn-outline-danger btn-sm px-3">
+                  Limpar minha localização
+                </button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+        <p id="status-geolocalizacao" class="remed-hint mt-2 mb-0 d-none" aria-live="polite"></p>
+      </div>
+
+      <form method="get" action="{% url 'medicamentos:busca' %}" class="border rounded p-3 mb-4 bg-light" novalidate>
+        <div class="row g-3">
+          <div class="col-12 col-md-5">
+            <label for="{{ form.termo.id_for_label }}" class="form-label fw-medium">{{ form.termo.label }}</label>
+            {{ form.termo }}
+          </div>
+          <div class="col-12 col-md-4">
+            <label for="{{ form.forma_farmaceutica.id_for_label }}" class="form-label fw-medium">{{ form.forma_farmaceutica.label }}</label>
+            {{ form.forma_farmaceutica }}
+          </div>
+          <div class="col-12 col-md-3">
+            <label for="{{ form.concentracao.id_for_label }}" class="form-label fw-medium">{{ form.concentracao.label }}</label>
+            {{ form.concentracao }}
+          </div>
+          <div class="col-12 col-md-4">
+            <label for="{{ form.distancia_max_km.id_for_label }}" class="form-label fw-medium">{{ form.distancia_max_km.label }}</label>
+            {{ form.distancia_max_km }}
+            <div class="remed-hint mt-1">Aplicado quando CEP ou localização estiver ativa.</div>
+          </div>
+          <div class="col-12 col-md-4">
+            <label for="{{ form.validade_minima.id_for_label }}" class="form-label fw-medium">{{ form.validade_minima.label }}</label>
+            {{ form.validade_minima }}
+          </div>
+          <div class="col-12 col-md-4">
+            <label for="{{ form.condicao_conservacao.id_for_label }}" class="form-label fw-medium">{{ form.condicao_conservacao.label }}</label>
+            {{ form.condicao_conservacao }}
+          </div>
+        </div>
+        <div class="d-flex flex-wrap gap-2 mt-3">
+          <button type="submit" class="btn btn-primary btn-sm px-4">Buscar medicamentos</button>
+          {% if tem_filtros %}
+            <a href="{% url 'medicamentos:busca' %}" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center">
+              Limpar filtros
+            </a>
+          {% endif %}
+        </div>
+      </form>
+
+      {% if not localizacao_atual and pagina.object_list %}
+        <p class="remed-hint mb-3">
+          Exibindo doações disponíveis mais recentes. Informe seu CEP ou ative sua localização acima para ordenar por proximidade.
+        </p>
+      {% endif %}
+
+      {% if pagina.object_list %}
+        <div class="row g-3 mb-4">
+          {% for item in pagina.object_list %}
+            <div class="col-12 col-lg-6">
+              <article class="border rounded p-3 h-100 bg-white d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                  <div>
+                    <h2 class="h6 fw-bold mb-0">{{ item.nome_medicamento }}</h2>
+                    <div class="small text-secondary">{{ item.principio_ativo }}</div>
+                  </div>
+                  <span class="badge remed-badge-read">{{ item.forma_farmaceutica_nome }}</span>
+                </div>
+
+                <dl class="row small mb-2 gy-1">
+                  <dt class="col-5 text-secondary">Concentração</dt>
+                  <dd class="col-7 mb-0">{{ item.concentracao_dosagem }}</dd>
+                  <dt class="col-5 text-secondary">Quantidade disponível</dt>
+                  <dd class="col-7 mb-0">{{ item.quantidade_disponivel }} unidade(s)</dd>
+                  <dt class="col-5 text-secondary">Validade</dt>
+                  <dd class="col-7 mb-0">{{ item.data_validade|date:"d/m/Y" }}</dd>
+                  <dt class="col-5 text-secondary">Região aproximada</dt>
+                  <dd class="col-7 mb-0">
+                    {{ item.regiao_aproximada }}{% if item.faixa_distancia %} · <strong>{{ item.faixa_distancia }}</strong>{% endif %}
+                  </dd>
+                </dl>
+
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                  {% if item.condicao_conservacao == "refrigerado" %}
+                    <span class="badge remed-badge-refrigerado">Refrigerado</span>
+                  {% else %}
+                    <span class="badge remed-badge-read">Temperatura ambiente</span>
+                  {% endif %}
+                  {% if item.sujeito_receita %}
+                    <span class="badge remed-badge-receita">Exige receita</span>
+                  {% else %}
+                    <span class="badge remed-badge-read">Sem receita obrigatória</span>
+                  {% endif %}
+                </div>
+
+                <div class="mt-auto pt-2 border-top d-flex flex-wrap justify-content-between align-items-center gap-2">
+                  {% if nav_autenticado %}
+                    <button
+                      type="button"
+                      class="btn btn-outline-secondary btn-sm"
+                      disabled
+                      aria-disabled="true"
+                    >
+                      Solicitar este medicamento (Em breve)
+                    </button>
+                    <span class="remed-hint">Cadastro de solicitações entra na próxima etapa.</span>
+                  {% else %}
+                    <a
+                      href="{% url 'contas:login' %}?next={% url 'medicamentos:busca' %}"
+                      class="btn btn-primary btn-sm d-inline-flex align-items-center px-3"
+                    >
+                      Solicitar este medicamento
+                    </a>
+                    <span class="remed-hint">Visualização resumida · entre para solicitar.</span>
+                  {% endif %}
+                </div>
+              </article>
+            </div>
+          {% endfor %}
+        </div>
+
+        {% if pagina.has_other_pages %}
+          <nav aria-label="Paginação de medicamentos">
+            <ul class="pagination justify-content-center mb-0">
+              {% if pagina.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ pagina.previous_page_number }}{% if request.GET.termo %}&termo={{ request.GET.termo|urlencode }}{% endif %}{% if request.GET.forma_farmaceutica %}&forma_farmaceutica={{ request.GET.forma_farmaceutica|urlencode }}{% endif %}{% if request.GET.concentracao %}&concentracao={{ request.GET.concentracao|urlencode }}{% endif %}{% if request.GET.distancia_max_km %}&distancia_max_km={{ request.GET.distancia_max_km|urlencode }}{% endif %}{% if request.GET.validade_minima %}&validade_minima={{ request.GET.validade_minima|urlencode }}{% endif %}{% if request.GET.condicao_conservacao %}&condicao_conservacao={{ request.GET.condicao_conservacao|urlencode }}{% endif %}">
+                    Anterior
+                  </a>
+                </li>
+              {% endif %}
+              <li class="page-item disabled">
+                <span class="page-link">Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+              </li>
+              {% if pagina.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ pagina.next_page_number }}{% if request.GET.termo %}&termo={{ request.GET.termo|urlencode }}{% endif %}{% if request.GET.forma_farmaceutica %}&forma_farmaceutica={{ request.GET.forma_farmaceutica|urlencode }}{% endif %}{% if request.GET.concentracao %}&concentracao={{ request.GET.concentracao|urlencode }}{% endif %}{% if request.GET.distancia_max_km %}&distancia_max_km={{ request.GET.distancia_max_km|urlencode }}{% endif %}{% if request.GET.validade_minima %}&validade_minima={{ request.GET.validade_minima|urlencode }}{% endif %}{% if request.GET.condicao_conservacao %}&condicao_conservacao={{ request.GET.condicao_conservacao|urlencode }}{% endif %}">
+                    Próxima
+                  </a>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+        {% endif %}
+      {% else %}
+        <div class="text-center py-4 px-3 border rounded bg-light">
+          <p class="fw-semibold mb-1">Nenhum medicamento encontrado</p>
+          <p class="remed-hint mb-3">
+            Você poderá cadastrar uma solicitação para ser notificado assim que uma doação compatível ficar disponível.
+          </p>
+          <button
+            type="button"
+            class="btn btn-outline-secondary btn-sm"
+            disabled
+            aria-disabled="true"
+          >
+            Cadastrar uma solicitação (Em breve)
+          </button>
+        </div>
+      {% endif %}
+    </section>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'js/busca_medicamentos.js' %}" defer></script>
+{% endblock %}

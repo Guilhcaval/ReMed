@@ -453,17 +453,48 @@ textarea:focus-visible {
   border-color: #bdd4ee;
 }
 
-.remed-status-aprovado {
+.remed-status-aprovado,
+.remed-status-disponivel,
+.remed-status-entregue,
+.remed-status-sucesso {
   background-color: #e6f4ea;
   color: #14532d;
   border-color: #b7dfc4;
 }
 
+.remed-status-reservado,
+.remed-status-parcial {
+  background-color: #fff4e5;
+  color: #7c3e00;
+  border-color: #f2cf9b;
+}
+
+.remed-status-cancelado {
+  background-color: var(--remed-surface-muted);
+  color: #384855;
+  border-color: #cbd6df;
+}
+
 .remed-status-reprovado,
-.remed-status-vencido {
+.remed-status-vencido,
+.remed-status-falha {
   background-color: var(--remed-danger-soft);
   color: #8f1d28;
   border-color: #ebbfc4;
+}
+
+.remed-badge-refrigerado {
+  background-color: #e3f2fd;
+  color: #0d477a;
+  border: 1px solid #b6d7f5;
+  font-weight: 600;
+}
+
+.remed-badge-receita {
+  background-color: #fff4e5;
+  color: #7c3e00;
+  border: 1px solid #f2cf9b;
+  font-weight: 600;
 }
 
 .remed-btn-accent {
